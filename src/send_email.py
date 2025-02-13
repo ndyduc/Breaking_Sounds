@@ -56,6 +56,8 @@ def send_email(email, username):
         return False
 
 
+
+
 def send_forgot(email, username):
     token = str(uuid.uuid4())  # Sinh token ngẫu nhiên
 
