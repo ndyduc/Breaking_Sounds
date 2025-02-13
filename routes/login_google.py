@@ -1,0 +1,103 @@
+from flask import Flask, redirect, url_for, session, request, jsonify, Blueprint
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from google.auth.transport.requests import Request
+from src.data_connecter import *
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
+from dotenv import load_dotenv
+import os
+
+
+load_dotenv()  # Thay thế bằng một secret key an toàn
+# Cấu hình OAuth 2.0
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Chỉ sử dụng trong môi trường phát triển
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+
+# Cấu hình Flow
+flow = Flow.from_client_config(
+    client_config={
+        "web": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+    },
+    scopes=["openid",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email"],
+    redirect_uri="https://127.0.0.1:3202/login/callback",
+)
+
+google = Blueprint('google', __name__, url_prefix='/')
+
+
+@google.route('/login')
+def login():
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true'
+    )
+    session['state'] = state
+    return redirect(authorization_url)
+
+
+@google.route('/login/callback')
+def callback():
+    try:
+        flow.fetch_token(authorization_response=request.url)
+        if not session['state'] == request.args['state']: return 'State mismatch', 400
+
+        credentials = flow.credentials
+        id_info = id_token.verify_oauth2_token(
+            credentials.id_token,
+            requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+        print(id_info)
+        # Lưu thông tin người dùng vào session
+        session['id'] = id_info['sub']
+        session['google_id'] = id_info.get('sub')
+        session['name'] = id_info.get('name')
+        session['email'] = id_info.get('email')
+        session['picture'] = id_info.get('picture')
+
+        return redirect(url_for('google.profile'))
+    except Exception as e:
+        print(f"Lỗi khi lấy token: {e}")
+        return "Lỗi xác thực OAuth2", 400
+
+
+@google.route('/profile')
+def profile():
+    if check_exist_user(session['email']):
+        user = get_user(None, session['email'])
+        session['user_id'] = str(user['_id'])
+        print(user['_id'])
+        return redirect(url_for('index'))
+    else:
+        user = insert_user(session['google_id'], session['name'], session['email'], None, session['picture'])
+        session['user_id'] = user
+        print(user)
+
+
+    if 'google_id' not in session:
+        return redirect(url_for('login'))
+
+    return f'''
+        <h1>Profile</h1>
+        <p>ID : {session['id']} </p>
+        <p>Name: {session['name']}</p>
+        <p>Email: {session['email']}</p>
+        <p><img src="{session['picture']}" alt="Profile Picture" width="100"></p>
+        <a href="/logout">Logout</a>
+    '''
+
+
+@google.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))

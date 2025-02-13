@@ -1,2 +1,13 @@
 .env
 client_secret.js
+# Bỏ qua file cấu hình bí mật
+
+# Bỏ qua thư mục hệ thống
+.DS_Store
+.idea/
+__pycache__/
+
+# Bỏ qua file SSL (nếu không muốn public)
+certificate.crt
+private.key
+csr.csr

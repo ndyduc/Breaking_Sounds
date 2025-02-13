@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Login to ndyduc</title>
+	<link rel="icon" href="../static/img/music_note.png">
+	<link href='https://fonts.googleapis.com/css?family=Lato:300,400,700' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="../static/css/login_signup.css" sizes="32*32">
+	<script id="rendered-js">
+		document.addEventListener("DOMContentLoaded", function () {
+			const wrap = document.getElementById("main");
+			const signUpBtn = document.getElementById("signUpBtn");
+			const loginBtn = document.getElementById("loginBtn");
+			
+			signUpBtn.addEventListener("click", function () {
+				wrap.classList.add("singUpActive");
+				wrap.classList.remove("loginActive");
+			});
+			
+			loginBtn.addEventListener("click", function () {
+				wrap.classList.add("loginActive");
+				wrap.classList.remove("singUpActive");
+			});
+		});
+	</script>
+</head>
+<body>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="message">{{ message|replace("\n", "<br>")|safe }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+<div style="position:fixed; display: flex; top: 10px; left: 20px; z-index: 3;">
+	<label>
+		<img style="color: white; width: 55px; height: 50px; padding-left: 20px"
+		     src="../static/img/music_note_white.png">
+	</label>
+	<a style="padding-left: 10px; display: flex; align-items:center;font-size: 28px; text-decoration: none; font-family: 'Satisfy', cursive; font-weight: 300;"
+	   href="/">Breaking Sounds</a>
+</div>
+<div class="wrap_bg">
+	<div id="main" class="login_wrap singUpActive">
+		<div class="login_question_wrap">
+			<div class="question_singUp ">
+				<h2 class="title">Don't have an account?</h2>
+				<p>Jump in with us to prepare skill and get ready to execute in our theatre !
+				</p>
+				<a href="javascript:void(0)" id="signUpBtn" class="btn btn_rounded">Sing up</a>
+			</div>
+			<div class="question_login ">
+				<h2 class="title">Have an account?</h2>
+				<p>Let's continue your lesson or bring your skill to execute in our theatres.
+				</p>
+				<a href="javascript:void(0)" id="loginBtn" class="btn btn_rounded">Log in</a>
+				<br>
+				<a href="/login" id="google">Continue with Google
+					<label>
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+						     class="bi bi-google" viewBox="0 0 16 16">
+							<path
+								d="M15.545 6.558a9.4 9.4 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.7 7.7 0 0 1 5.352 2.082l-2.284 2.284A4.35 4.35 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.8 4.8 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.7 3.7 0 0 0 1.599-2.431H8v-3.08z"/>
+						</svg>
+					</label>
+				</a>
+			</div>
+			<div class="action_singUp">
+				<form action="{{ url_for('signup') }}" method="post">
+					<fieldset>
+						<legend class="title">Sing Up</legend>
+						<div class="input_block">
+							<div class="input_wrap">
+								<input type="text" id="username" name="username" class="input" placeholder="Full Name"
+								       required>
+								<label for="username" class="label_name"></label>
+							</div>
+							<div class="input_wrap">
+								<input type="text" id="email" name="email" class="input" placeholder="Email" required>
+								<label for="email" class="label_mail"></label>
+							</div>
+							<div class="input_wrap">
+								<input type="password" id="password" name="password" class="input"
+								       placeholder="Password" required>
+								<label for="password" class="label_pass"></label>
+							</div>
+						</div>
+						<input type="submit" value="Sing Up" class="btn btn_red">
+					</fieldset>
+				</form>
+			</div>
+			<div class="action_login">
+				<form action="{{ url_for('loggin') }}" method="post">
+					<fieldset>
+						<input type="hidden" id="action" name="action" value="login">
+
+						<legend class="title">Log in</legend>
+						<div class="input_block">
+							<div class="input_wrap">
+								<input type="text" id="mail_login" name="email" class="input" placeholder="Email"
+								       required>
+								<label for="mail_login" class="label_mail"></label>
+							</div>
+							<div class="input_wrap">
+								<input type="password" id="passlog" name="password" class="input" placeholder="Password">
+								<label for="passlog" class="label_pass"></label>
+							</div>
+						</div>
+						<input type="submit" onclick="setAction('reset')" class="forgotPass" value="Forgot password?" style="color: #7289DA">
+						<input onclick="setAction('login')" type="submit" value="Login" class="btn btn_red">
+					</fieldset>
+				</form>
+				<script>
+					function setAction(actionType) {
+						document.getElementById("action").value = actionType;
+					}
+				</script>
+			</div>
+		</div>
+		<div class="login_action_wrap ">
+		</div>
+	</div>
+</div>
+</body>
+</html>
