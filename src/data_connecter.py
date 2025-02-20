@@ -92,15 +92,20 @@ def check_exist_user(email):
     return user is not None
 
 
-def update_user(user_id, username=None, email=None, password=None, avatar_url=None, locale=None):
-    if not ObjectId.is_valid(user_id): return {"error": "Invalid ObjectId"}
+def update_user(user_id, username=None, email=None, password=None, avatar_url=None, bio=None, organization=None, city=None, country=None, whatsapp=None):
+    if not ObjectId.is_valid(str(user_id)):
+        return {"error": "Invalid ObjectId"}
 
     update_fields = {
         "Username": username,
         "Email": email,
         "Password": generate_password_hash(password) if password else None,
         "Avatar_url": avatar_url,
-        "Locale": locale
+        "Bio": bio,
+        "Organization": organization,
+        "City": city,
+        "Country": country,
+        "WhatsApp": whatsapp
     }
 
     # Loại bỏ các giá trị `None` để tránh cập nhật thừa

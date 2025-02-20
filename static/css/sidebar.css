@@ -66,8 +66,8 @@ html, body {
 
 #nav-bar {
 	position: absolute;
-	right: 0;
-	top: 0;
+	right: 5px;
+	top: 8px;
 	height: calc(100% - 1vw);
 	background: var(--navbar-dark-primary);
 	border-radius: 16px;

@@ -63,11 +63,15 @@ def loggin():
             flash("Password was in correct !")
             return redirect(url_for('login_base'))
     elif action == "reset":
-        return redirect(url_for('forgot'))
+        user = get_user(None, email)
+        if user is None:
+            flash("User not found !")
+            session.clear()
+            return redirect(url_for('login_base'))
+        else:
+            return redirect(url_for('forgot'))
     else:
         return redirect(url_for('/'))
-
-
 
 
 @app.route('/verify/<token>')
@@ -121,12 +125,43 @@ def forgot_password(token):
 
     return redirect(url_for('change_password'))
 
+
+@app.route('/change_pass', methods=['POST'])
+def change_pass():
+    session.pop('_flashes', None)
+    pass1 = request.form.get('pass1')
+    pass2 = request.form.get('pass2')
+
+    if pass1 != pass2:
+        return jsonify({"success": False, "message": "Passwords do not match!"})
+
+    email = session.get('email')
+    if not email:
+        return jsonify({"success": False, "message": "User not authenticated!"})
+
+    user = get_user(None, email)
+    if not user:
+        return jsonify({"success": False, "message": "User not found!"})
+
+    session['user_id'] = str(user.get('_id'))
+    user_up = update_user(user.get('_id'), None, None, pass1, None, None, None, None, None, None)
+
+    if user_up == {"success": "User updated successfully"}:
+        return jsonify({
+            "success": True,
+            "message": "Password updated successfully!",
+            "redirect": url_for('index')
+        })
+
+    return jsonify({"success": False, "message": "Error updating password!"})
+
+
 @app.route('/change_password', methods=['GET', 'POST'])
 def change_password():
     return render_template('change_password.html')
 
 
-@app.route('/authorize')
+# @app.route('/authorize')
 def authorize():
     flow = Flow.from_client_secrets_file(
         'src/client_secret.json',
@@ -144,7 +179,10 @@ def authorize():
 
 @app.route('/checkemail')
 def callback():
-    state = session['state']
+    state = session.get('state')
+    if not state:
+        return "State not found", 400
+
     flow = Flow.from_client_secrets_file(
         'src/client_secret.json',
         scopes=['https://www.googleapis.com/auth/gmail.send'],
@@ -156,9 +194,34 @@ def callback():
     credentials = flow.credentials
     session['credentials'] = credentials_to_dict(credentials)
 
+    # Cập nhật REFRESH_TOKEN trong file .env
+    if credentials.refresh_token:
+        update_env_file("REFRESH_TOKEN", credentials.refresh_token)
+    else:
+        print("🔹 Không có refresh token mới được cấp.")
+
     print("🔹 Scope đã được cấp quyền:", credentials.scopes)
 
     return redirect(url_for('index'))
+
+
+def update_env_file(key, value):
+    with open('.env', 'r') as f:
+        lines = f.readlines()
+
+    with open('.env', 'w') as f:
+        updated = False
+        for line in lines:
+            if line.startswith(f"{key}="):
+                f.write(f"{key}={value}\n")
+                updated = True
+            else:
+                f.write(line)
+
+        if not updated:
+            f.write(f"{key}={value}\n")
+
+    print(f"🔹 Đã cập nhật {key} trong .env")
 
 
 def credentials_to_dict(credentials):
@@ -170,6 +233,11 @@ def credentials_to_dict(credentials):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
+
+
+@app.route('/home')
+def home():
+    return render_template('user_home.html')
 
 
 if __name__ == '__main__':
