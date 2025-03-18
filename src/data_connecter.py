@@ -4,6 +4,7 @@ from bson.objectid import ObjectId
 from pymongo.errors import DuplicateKeyError, PyMongoError
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
+from bson.binary import Binary
 import os
 
 try:
@@ -12,8 +13,9 @@ try:
     client = MongoClient(mongo_uri)
     db = client['ndyduc']
     Users = db['Users']
+    Vocals = db['Vocals']
 
-    client.server_info()  # Kiểm tra kết nối
+    client.server_info()
     connection_status = True
     print("Kết nối MongoDB thành công!")
 
@@ -26,12 +28,37 @@ def Check_connect():
     if not connection_status:
         return jsonify({"status": "error", "message": "Không thể kết nối đến MongoDB"}), 500
 
-    # Kiểm tra dữ liệu trong collection Users
-    data = list(Users.find({}, {"_id": 0}))  # Ẩn `_id` trong kết quả
+    data = list(Users.find({}, {"_id": 0}))
     if data:
         return jsonify({"status": "success", "rows": len(data), "data": data})
     else:
         return jsonify({"status": "success", "message": "empty"})
+
+
+def save_vocal(user_id, file):
+    try:
+        file_data = file.read()
+
+        mp3_document = {
+            "_id": ObjectId(),
+            "user_id": user_id,
+            "filename": file.filename,
+            "data": Binary(file_data)
+        }
+        result = Vocals.insert_one(mp3_document)
+
+        return str(result.inserted_id)
+    except Exception as e:
+        return None
+
+
+def is_vocal_exists(user_id, filename):
+    try:
+        query = {"user_id": user_id, "filename": filename}
+        return Vocals.find_one(query) is not None
+    except Exception as e:
+        print(f"Lỗi khi kiểm tra vocal: {e}")
+        return False
 
 
 def insert_user(id_google=None, username=None, email=None, password=None, avatar_url=None):
@@ -61,13 +88,15 @@ def insert_user(id_google=None, username=None, email=None, password=None, avatar
         return None
 
 
-def get_user(id_google=None, email=None):
+def get_user(id_google=None, email=None, ob_id=None):
     try:
         query = {}
         if id_google:
             query["ID_google"] = id_google
         if email:
             query["Email"] = email
+        if ob_id:
+            query["_id"] = ObjectId(ob_id)
 
         user = Users.find_one(query)
         return user if user else None

@@ -1,6 +1,7 @@
 from flask import *
 from google_auth_oauthlib.flow import Flow
 from routes.login_google import google
+from routes.sounds import sounds
 from src.data_connecter import *
 from src.send_email import send_email, send_forgot
 import os
@@ -9,6 +10,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('MY_KEY')
 app.config["SESSION_TYPE"] = "filesystem"
 app.register_blueprint(google)
+app.register_blueprint(sounds)
 
 
 @app.route('/')
@@ -49,7 +51,6 @@ def loggin():
     email = request.form.get('email')
     password = request.form.get('password')
 
-
     session['email'] = email
 
     action = request.form.get("action")
@@ -58,6 +59,8 @@ def loggin():
             flash("Please enter your password !")
             return redirect(url_for('login_base'))
         if verify_password(email, password):
+            user = get_user(email)
+            session['user_id'] = str(user["_id"])
             return redirect(url_for('index'))
         else:
             flash("Password was in correct !")
@@ -109,6 +112,7 @@ def forgot():
     else:
         flash("Error when sending email !")
         return redirect(url_for('login_base'))
+        # return redirect(url_for('authorize'))
 
 
 @app.route('/forgot/<token>')
@@ -132,16 +136,16 @@ def change_pass():
     pass1 = request.form.get('pass1')
     pass2 = request.form.get('pass2')
 
-    if pass1 != pass2:
-        return jsonify({"success": False, "message": "Passwords do not match!"})
-
     email = session.get('email')
-    if not email:
-        return jsonify({"success": False, "message": "User not authenticated!"})
-
     user = get_user(None, email)
     if not user:
         return jsonify({"success": False, "message": "User not found!"})
+
+    if pass1 != pass2:
+        return jsonify({"success": False, "message": "Passwords do not match!"})
+
+    if not email:
+        return jsonify({"success": False, "message": "User not authenticated!"})
 
     session['user_id'] = str(user.get('_id'))
     user_up = update_user(user.get('_id'), None, None, pass1, None, None, None, None, None, None)
@@ -161,7 +165,7 @@ def change_password():
     return render_template('change_password.html')
 
 
-# @app.route('/authorize')
+@app.route('/authorize')
 def authorize():
     flow = Flow.from_client_secrets_file(
         'src/client_secret.json',
@@ -238,6 +242,13 @@ def credentials_to_dict(credentials):
 @app.route('/home')
 def home():
     return render_template('user_home.html')
+
+
+@app.route("/check_session_user_id")
+def check_session():
+    if "user_id" in session:
+        return jsonify({"logged_in": True})
+    return jsonify({"logged_in": False})
 
 
 if __name__ == '__main__':

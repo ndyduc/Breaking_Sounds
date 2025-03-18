@@ -63,6 +63,11 @@ body {
 	background-image: url("../img/BG_login.jpg");
 	background-size: cover;
 	background-position: 50%;
+	animation: bg 3s infinite;
+}
+
+@keyframes bg {
+	100%{filter: hue-rotate(360deg);}
 }
 
 .btn {

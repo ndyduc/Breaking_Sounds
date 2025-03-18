@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+	<style>
+		* {
+			padding: 0;
+			margin: 0;
+		}
+		
+		body {
+			display: flex;
+			min-height: 100vh;
+			align-items: center;
+			justify-content: center;
+			background-color: #fff;
+			overflow: hidden;
+		}
+		
+		.wrapper {
+			position: relative;
+			width: 150px;
+			height: 150px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		
+		span {
+			position: absolute;
+			display: block;
+			width: 30%;
+			height: 30%;
+			animation: rotate 6s linear infinite;
+			animation-delay: calc(0.15s * var(--i));
+		}
+		
+		@keyframes rotate {
+			0% {
+				transform: rotate(0);
+			}
+			100% {
+				transform: rotate(720deg);
+			}
+		}
+		
+		.bubble {
+			position: absolute;
+			width: 3px;
+			height: 3px;
+			background-color: rgb(254, 188, 188);
+			border-radius: 50%;
+			/*opacity: 0.5;*/
+			animation: size 4s linear infinite;
+			animation-delay: calc(0.15s * var(--i));
+		}
+		
+		@keyframes size {
+			0% {
+				filter: hue-rotate(0deg);
+			}
+			90% {
+				transform: scale(4);
+				filter: hue-rotate(360deg)
+			}
+		}
+	
+	</style>
+</head>
+<body>
+	<div class="wrapper">
+            <span style="--i: 1">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 2">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 3">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 4">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 5">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 6">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 7">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 8">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 9">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 10">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 11">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 12">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 13">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 14">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 15">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 16">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 17">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 18">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 19">
+                <span class="bubble"></span>
+            </span>
+            <span style="--i: 20">
+                <span class="bubble"></span>
+            </span>
+        </div>
+</body>
+</html>

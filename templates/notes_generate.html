@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+{% include 'header.html' %}
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Notes Generate</title>
+	<link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+	<script src="https://unpkg.com/magic-snowflakes/dist/snowflakes.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+	<style>
+		* {
+			user-select: none;
+			-webkit-user-select: none;
+			-moz-user-select: none;
+			-ms-user-select: none;
+		}
+		
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+		}
+		
+		html::-webkit-scrollbar, body::-webkit-scrollbar {
+			display: none;
+		}
+		
+		strong {
+			color: rgb(254, 188, 188);
+		}
+		
+		#gene {
+			margin: 0;
+			position: relative;
+			width: 100vw;
+			height: 100vh;
+			background: url("../static/img/understanding_dotted_notes_clearly.jpg.webp") center/cover no-repeat;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		
+		#gene_body {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 15px;
+			width: 80%;
+			max-width: 500px;
+			padding: 50px 20px;
+			border: 3px dashed white; /* Viền nét đứt */
+			border-radius: 15px;
+			background: rgba(0, 0, 0, 0.3); /* Màu nền mờ */
+			backdrop-filter: blur(5px); /* Hiệu ứng làm mờ */
+			text-align: center;
+		}
+		
+		#file_info {
+			gap: 40px;
+			width: 80%;
+			max-width: 900px;
+			padding: 30px 20px;
+			border-radius: 15px;
+			background: rgba(0, 0, 0, 0.3); /* Màu nền mờ */
+			backdrop-filter: blur(5px); /* Hiệu ứng làm mờ */
+			color: white;
+		}
+		
+		#load {
+			position: absolute;
+			width: 80%;
+			max-width: 900px;
+			height: 360px;
+			padding: 30px 20px;
+			border-radius: 15px;
+			background: rgb(0, 0, 0, 0.65);
+			backdrop-filter: blur(5px);
+			display: none;
+			justify-content: center;
+			align-items: center;
+			z-index: 10;
+		}
+		
+		#cancel, #cancel_message {
+			position: absolute;
+			top: 30px;
+			right: 30px;
+			cursor: pointer;
+			width: 30px;
+			height: 30px;
+		}
+		
+		#audio_player {
+			margin-top: 10px;
+			width: 500px;
+		}
+		
+		#inform {
+			color: white;
+			font-size: 26px;
+			font-family: 'Lobster', cursive;
+		}
+		
+		label {
+			color: white;
+		}
+		
+		#info {
+			max-height: 300px;
+		}
+		
+		.custom-file-upload {
+			display: inline-block;
+			width: 200px;
+			height: 50px;
+			border-radius: 15px;
+			background-color: #7289DA;
+			color: white;
+			font-size: 16px;
+			font-weight: bold;
+			text-align: center;
+			line-height: 50px;
+			cursor: pointer;
+			transition: 0.3s;
+			border: 2px solid transparent;
+		}
+		
+		.custom-file-upload:hover {
+			background-color: #5b6eae;
+		}
+		
+		.custom-file-upload:active {
+			background-color: #4a5c93;
+			border-color: white;
+		}
+		
+		#nut_bam, #download {
+			display: flex;
+			gap: 30px;
+			align-items: center;
+		}
+		
+		#generate_notes, #isolate, #dl_vocal, #save_vocal {
+			position: relative;
+			display: grid;
+			place-items: center;
+			width: 235px;
+			height: 50px;
+			top: 5px;
+			border: 0;
+			border-radius: 15px;
+			color: white;
+			font-family: 'Lobster', cursive;
+			font-size: 24px;
+			text-decoration: none;
+			background-color: rgb(254, 188, 188);
+			cursor: pointer;
+			animation: 0.5s ease-in-out;
+		}
+		
+		#file_name {
+			display: inline-block;
+			max-width: 400px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			vertical-align: middle;
+		}
+		
+		#dl_vocal:hover, #isolate:hover, #generate_notes:hover, #save_vocal:hover {
+			color: rgb(254, 188, 188);
+			background-color: white;
+			box-shadow: 5px 5px rgba(254, 188, 188, 0.8);
+			transition: all 0.3s ease-in-out;
+		}
+		
+		p {
+			margin-bottom: 0;
+		}
+		
+		#message {
+			display: none;
+			position: absolute;
+			border-radius: 30px;
+			width: 40%;
+			left: 30%;
+			top: 100px;
+			padding: 10px 50px;
+			background-color: white;
+			color: rgb(254, 188, 188);
+		}
+	</style>
+</head>
+<body>
+<div id="gene">
+	<div id="gene_body">
+		<img src="../static/logo/upload.svg" alt="">
+		<div id="inform">Drag or Drop file in here</div>
+		<label>(required mp3, wav )</label>
+		<label>Or</label>
+		<input type="file" name="file" id="file" hidden accept=".mp3, .wav">
+		<label for="file" class="custom-file-upload">Browse file</label>
+	</div>
+	<div id="load">
+		{% include 'rgbload.html' %}
+	</div>
+	<div id="file_info" style="display: none; ">
+		<img id="file_image" src="" alt="Album Art" width="300px" height="300px" style="border-radius: 10px;">
+		<form action="{{ url_for('sounds.upload_file') }}" method="post" id="info">
+			<img id="cancel" src="../static/logo/X.svg" alt="">
+			<input type="file" name="file_up" id="file_up" hidden>
+			<input type="hidden" id="hidden_file_name" name="hidden_file_name">
+			<p><strong>File Name:</strong> <label id="file_name"></label></p>
+			<div style="display: flex; justify-content: space-between;">
+				<p><strong>File Type:</strong> <label id="file_type"></label></p>
+				<p><strong>File Size:</strong> <label id="file_size"></label></p>
+				<p><strong>Duration:</strong> <label id="file_duration">Loading...</label></p>
+			</div>
+			<div style="display: flex; justify-content: center;align-items: center;">
+				<img id="waveform" src="data:image/png;base64," alt=""
+				     style="width: 500px; height: 150px; border-radius: 10px">
+			</div>
+			<audio id="audio_player" controls></audio>
+			<div id="nut_bam">
+				<button type="submit" name="action" id="generate_notes" value="generate">Generate Note</button>
+				<button type="button" id="isolate">Isolate vocal</button>
+			</div>
+			<div id="download" style="display: none;">
+				<button type="button" id="save_vocal">Save Vocal</button>
+				<button type="button" id="dl_vocal">Download File Vocal</button>
+			</div>
+		</form>
+	</div>
+	<div id="message">
+		<p id="mess"></p>
+		<img id="cancel_message" src="../static/logo/X_pink.svg" alt="" style="width: 25px;height: 25px; top: 10px; right: 15px">
+	</div>
+</div>
+
+<script>
+	document.getElementById('cancel_message').addEventListener("click", function () {
+		document.getElementById('message').style.display = 'none';
+	})
+	
+	document.getElementById("save_vocal").addEventListener("click", function () {
+		document.getElementById('load').style.display = 'flex';
+		fetch("/check_session_user_id")
+			.then(response => response.json())
+			.then(data => {
+				if (data.logged_in) {
+					let audioPlayer = document.getElementById("audio_player")
+					fetch(audioPlayer.src)
+						.then(response => response.blob())
+						.then(blob => {
+							let formData = new FormData();
+							let name = document.getElementById("file_name").textContent;
+							formData.append("audio", blob, name);
+							
+							return fetch("/save_vocals", {
+								method: "POST",
+								body: formData
+							});
+						})
+						.then(response => response.json())
+						.then(result => {
+							document.getElementById('load').style.display = 'none';
+							let statusElement = document.getElementById("mess");
+							let divmess = document.getElementById("message");
+							divmess.style.display = "flex";
+							
+							if (result.status) {
+								statusElement.innerText = "File saved at vocals library !";
+							} else {
+								statusElement.innerText = result.message;
+							}
+							
+							setTimeout(() => {
+								divmess.style.display = "none";
+							}, 15000);
+						})
+						.catch(error => console.error("Error:", error));
+				} else {
+					window.location.href = "{{ url_for('login_base') }}";
+				}
+			})
+			.catch(error => console.error("Error:", error));
+	});
+</script>
+<script>
+	document.getElementById("isolate").addEventListener("click", function () {
+		document.getElementById("nut_bam").style.display = "none";
+		document.getElementById('load').style.display = 'flex';
+		uploadFile("isolate");
+	});
+	
+	function uploadFile(action) {
+		let fileInput = document.getElementById("file_up");
+		let formData = new FormData();
+		formData.append("file_up", fileInput.files[0]);
+		formData.append("action", action);
+		
+		fetch("{{ url_for('sounds.upload_file') }}", {
+			method: "POST",
+			body: formData
+		})
+			.then(response => response.json())
+			.then(data => {
+				document.getElementById("file_type").innerText = data.file_type;
+				document.getElementById("file_size").innerText = formatFileSize(data.file_size);
+				document.getElementById("file_duration").innerText = data.duration || "Unknown";
+				document.getElementById("waveform").src = data.waveform;
+				
+				let audioPlayer = document.getElementById("audio_player");
+				audioPlayer.src = data.file;
+				if (!audioPlayer.paused) {
+					audioPlayer.pause()
+					audioPlayer.currentTime = 0;
+				}
+				document.getElementById("download").style.display = "flex";
+				document.getElementById('load').style.display = 'none';
+			})
+			.catch(error => {
+				console.error("Lỗi:", error);
+			});
+	}
+	
+	function formatFileSize(bytes) {
+		if (bytes < 1024) return bytes + " B";
+		if (bytes < 1048576) return (bytes / 1024).toFixed(2) + " KB";
+		return (bytes / 1048576).toFixed(2) + " MB";
+	}
+</script>
+<script>
+	document.getElementById("dl_vocal").addEventListener("click", function () {
+		let audioSrc = document.getElementById("audio_player").src;
+		if (!audioSrc) {
+			console.error("Không tìm thấy file để tải.");
+			return;
+		}
+		
+		let link = document.createElement("a");
+		link.href = audioSrc;
+		link.download = document.getElementById("file_name").textContent + "_vocals.mp3";
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+	});
+	
+	document.getElementById("cancel").addEventListener("click", function () {
+		let audioPlayer = document.getElementById("audio_player");
+		if (!audioPlayer.paused) {
+			audioPlayer.pause();
+		}
+		document.getElementById("gene_body").style.display = "flex";
+		document.getElementById("download").style.display = "none";
+		document.getElementById("nut_bam").style.display = "flex";
+		document.getElementById("file_info").style.display = "none";
+	});
+	
+	document.addEventListener("DOMContentLoaded", function () {
+		let dropArea = document.getElementById("gene_body");
+		let fileInput = document.getElementById("file");
+		
+		["dragenter", "dragover", "dragleave", "drop"].forEach(event => {
+			dropArea.addEventListener(event, e => e.preventDefault());
+		});
+		
+		dropArea.addEventListener("dragenter", () => dropArea.classList.add("highlight"));
+		dropArea.addEventListener("dragleave", () => dropArea.classList.remove("highlight"));
+		
+		dropArea.addEventListener("drop", function (e) {
+			dropArea.classList.remove("highlight");
+			if (e.dataTransfer.files.length > 0) {
+				processFile(e.dataTransfer.files[0]);
+			}
+		});
+		
+		// Xử lý khi chọn file từ input
+		fileInput.addEventListener("change", function () {
+			if (this.files.length > 0) {
+				processFile(this.files[0]);
+			}
+		});
+	});
+	
+	function isValidFileType(file) {
+		const allowedTypes = ["audio/mp3", "audio/wav", "audio/mpeg"];
+		return allowedTypes.includes(file.type);
+	}
+	
+	function processFile(file) {
+		if (!isValidFileType(file)) {
+			alert("Please choose file MP3 or WAV !");
+			document.getElementById("file").value = ""; // Reset input
+			return;
+		}
+		
+		let dataTransfer = new DataTransfer();
+		dataTransfer.items.add(file);
+		document.getElementById("file_up").files = dataTransfer.files;
+		
+		// Cập nhật thông tin file
+		updateFileInfo(file);
+		
+		// Hiển thị audio player
+		let fileURL = URL.createObjectURL(file);
+		document.getElementById("audio_player").src = fileURL;
+		
+		getAudioDuration(fileURL);
+		extractFileThumbnail(file);
+		
+		document.getElementById("gene_body").style.display = "none";
+		document.getElementById("file_info").style.display = "flex";
+		
+		let formData = new FormData();
+		formData.append("file", file);
+		
+		fetch("{{ url_for('sounds.get_waveform') }}", {
+			method: "POST",
+			body: formData
+		})
+			.then(response => response.blob())
+			.then(blob => {
+				document.getElementById("waveform").src = URL.createObjectURL(blob);
+			})
+			.catch(error => console.error("Lỗi:", error));
+	}
+	
+	function updateFileInfo(file) {
+		document.getElementById("file_name").textContent = file.name;
+		document.getElementById("file_type").textContent = file.type;
+		document.getElementById("file_size").textContent = (file.size / 1024 / 1024).toFixed(2) + " MB";
+		document.getElementById("hidden_file_name").value = file.name;
+	}
+	
+	function getAudioDuration(fileURL) {
+		let audio = new Audio(fileURL);
+		audio.addEventListener("loadedmetadata", function () {
+			document.getElementById("file_duration").textContent = formatTime(audio.duration);
+		});
+	}
+	
+	function formatTime(seconds) {
+		let h = Math.floor(seconds / 3600);
+		let m = Math.floor((seconds % 3600) / 60);
+		let s = Math.floor(seconds % 60);
+		return (h > 0 ? h.toString().padStart(2, "0") + ":" : "") +
+			m.toString().padStart(2, "0") + ":" +
+			s.toString().padStart(2, "0");
+	}
+	
+	function extractFileThumbnail(file) {
+		jsmediatags.read(file, {
+			onSuccess: function (tag) {
+				if (tag.tags.picture) {
+					let {data, format} = tag.tags.picture;
+					let base64String = data.reduce((acc, byte) => acc + String.fromCharCode(byte), "");
+					document.getElementById("file_image").src = `data:${format};base64,${btoa(base64String)}`;
+				} else {
+					document.getElementById("file_image").src = "default-thumbnail.png";
+				}
+			},
+			onError: function () {
+				document.getElementById("file_image").src = "default-thumbnail.png";
+			}
+		});
+	}
+	
+	document.addEventListener("keydown", function (event) {
+		let audioPlayer = document.getElementById("audio_player");
+		
+		if (!audioPlayer.src) return; // Nếu chưa có file, bỏ qua
+		
+		switch (event.key) {
+			case "ArrowLeft": // Tua lùi 15s
+				audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 15);
+				break;
+			case "ArrowRight": // Tua tới 15s
+				audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 15);
+				break;
+			case " ": // Phát / Dừng khi nhấn Space
+				event.preventDefault(); // Ngăn trang web cuộn khi nhấn Space
+				if (audioPlayer.paused) {
+					audioPlayer.play();
+				} else {
+					audioPlayer.pause();
+				}
+				break;
+			case "m": // Tắt / Bật âm thanh khi nhấn "m"
+				audioPlayer.muted = !audioPlayer.muted;
+				break;
+			case "ArrowUp": // Tăng âm lượng
+				audioPlayer.volume = Math.min(1, audioPlayer.volume + 0.1);
+				break;
+			case "ArrowDown": // Giảm âm lượng
+				audioPlayer.volume = Math.max(0, audioPlayer.volume - 0.1);
+				break;
+		}
+	});
+	
+	document.getElementById("isolate").addEventListener("click", function () {
+		let Size = parseFloat(document.getElementById("file_size").textContent.replace("MB", "").trim());
+		let duration = document.getElementById("file_duration").textContent; // Lấy duration dưới dạng hh:mm:ss
+		
+		function durationToSeconds(duration) {
+			let parts = duration.split(":").map(Number);
+			if (parts.length === 3) {
+				return parts[0] * 3600 + parts[1] * 60 + parts[2];
+			} else if (parts.length === 2) {
+				return parts[0] * 60 + parts[1];
+			}
+			return 0;
+		}
+		
+		let durationInSeconds = durationToSeconds(duration);
+		
+		if (Size > 30) {
+			alert("The limit of size is 30MB.");
+			return;
+		}
+		
+		if (durationInSeconds > 3600) {
+			alert("File is too long, the maximum acceptable is 1 hour.");
+		}
+	});
+</script>
+<script>new Snowflakes();</script>
+</body>
+</html>

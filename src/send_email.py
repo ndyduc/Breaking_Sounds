@@ -6,7 +6,7 @@ import base64
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from flask import render_template, url_for, session
+from flask import render_template, url_for, session, redirect
 from google.oauth2 import service_account
 import os
 import json

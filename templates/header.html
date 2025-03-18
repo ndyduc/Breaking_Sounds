@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Breaking Sounds</title>
-	<link rel="icon" href="../static/img/music_note_white.png">
+	<link rel="icon" href="../static/logo/music_note_white.png">
 	<link rel="stylesheet" href="../static/css/header.css">
 	<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.2/css/all.css">
@@ -12,63 +12,93 @@
 	<script>
 		function test() {
 			var tabsNewAnim = $('#navbarSupportedContent');
-			var selectorNewAnim = $('#navbarSupportedContent').find('li').length;
 			var activeItemNewAnim = tabsNewAnim.find('.active');
-			var activeWidthNewAnimHeight = activeItemNewAnim.innerHeight();
-			var activeWidthNewAnimWidth = activeItemNewAnim.innerWidth();
-			var itemPosNewAnimTop = activeItemNewAnim.position();
-			var itemPosNewAnimLeft = activeItemNewAnim.position();
+			
+			// Lưu vị trí ban đầu của mục đang active
+			var defaultTop = activeItemNewAnim.position().top;
+			var defaultLeft = activeItemNewAnim.position().left;
+			var defaultHeight = activeItemNewAnim.innerHeight();
+			var defaultWidth = activeItemNewAnim.innerWidth();
+			
 			$(".hori-selector").css({
-				"top": itemPosNewAnimTop.top + "px",
-				"left": itemPosNewAnimLeft.left + "px",
-				"height": activeWidthNewAnimHeight - 10 + "px",
-				"width": activeWidthNewAnimWidth + "px"
+				"top": defaultTop + "px",
+				"left": defaultLeft + "px",
+				"height": defaultHeight - 10 + "px",
+				"width": defaultWidth + "px"
 			});
-			$("#navbarSupportedContent").on("click", "li", function (e) {
+			
+			$("#navbarSupportedContent").on("mouseenter", "li", function () {
+				var itemPos = $(this).position();
+				$(".hori-selector").css({
+					"top": itemPos.top + "px",
+					"left": itemPos.left + "px",
+					"height": $(this).innerHeight() - 10 + "px",
+					"width": $(this).innerWidth() + "px"
+				});
+			});
+			
+			// Khi rời chuột khỏi thanh menu -> quay lại vị trí cũ
+			$("#navbarSupportedContent").on("mouseleave", function () {
+				$(".hori-selector").css({
+					"top": defaultTop + "px",
+					"left": defaultLeft + "px",
+					"height": defaultHeight - 10 + "px",
+					"width": defaultWidth + "px"
+				});
+			});
+			
+			// Khi click vào menu, cập nhật vị trí mới
+			$("#navbarSupportedContent").on("click", "li", function () {
 				$('#navbarSupportedContent ul li').removeClass("active");
 				$(this).addClass('active');
-				var activeWidthNewAnimHeight = $(this).innerHeight();
-				var activeWidthNewAnimWidth = $(this).innerWidth();
-				var itemPosNewAnimTop = $(this).position();
-				var itemPosNewAnimLeft = $(this).position();
+				
+				// Cập nhật vị trí mới khi click vào mục khác
+				var newActiveItem = $(this);
+				defaultTop = newActiveItem.position().top;
+				defaultLeft = newActiveItem.position().left;
+				defaultHeight = newActiveItem.innerHeight();
+				defaultWidth = newActiveItem.innerWidth();
+				
 				$(".hori-selector").css({
-					"top": itemPosNewAnimTop.top + "px",
-					"left": itemPosNewAnimLeft.left + "px",
-					"height": activeWidthNewAnimHeight - 10 + "px",
-					"width": activeWidthNewAnimWidth + "px"
+					"top": defaultTop + "px",
+					"left": defaultLeft + "px",
+					"height": defaultHeight - 10 + "px",
+					"width": defaultWidth + "px"
 				});
 			});
 		}
 		
+		// Chạy khi trang load
 		$(document).ready(function () {
-			setTimeout(function () {
-				test();
-			});
+			setTimeout(test);
 		});
+		
+		// Cập nhật vị trí khi resize màn hình
 		$(window).on('resize', function () {
-			setTimeout(function () {
-				test();
-			}, 500);
+			setTimeout(test, 500);
 		});
+		
+		// Khi mở menu trên mobile
 		$(".navbar-toggler").click(function () {
 			$(".navbar-collapse").slideToggle(300);
-			setTimeout(function () {
-				test();
-			});
+			setTimeout(test);
 		});
 		// --------------add active class-on another-page move----------
 		jQuery(document).ready(function ($) {
-			// Get current path and find target link
 			var path = window.location.pathname.split("/").pop();
+			console.log("Current path:", path); // Debug xem path có đúng không
 			
-			// Account for home page with empty path
 			if (path == '') {
 				path = 'index.html';
 			}
 			
-			var target = $('#navbarSupportedContent ul li a[href="' + path + '"]');
-			// Add active class to target link
-			target.parent().addClass('active');
+			var target = $('#navbarSupportedContent ul li a[href="/' + path + '"]');
+			console.log("Target found:", target.length); // Kiểm tra có tìm thấy phần tử không
+			
+			if (target.length > 0) {
+				$('#navbarSupportedContent ul li').removeClass("active"); // Xóa active cũ
+				target.parent().addClass('active'); // Gán active cho mục đúng
+			}
 		});
 	
 	</script>
@@ -77,7 +107,7 @@
 <div id="header">
 	<nav class="navbar navbar-expand-custom navbar-mainbg" style="border: 0 !important; margin-bottom: 0 !important;">
 		<label><img style="color: white; width: 55px; height: 50px; padding-left: 20px"
-		            src="../static/img/music_note_white.png"></label>
+		            src="../static/logo/music_note_white.png"></label>
 		<a class="logo" href="/">Breaking Sounds</a>
 		<div class="collapse navbar-collapse" id="navbarSupportedContent">
 			<ul class="navbar-nav ml-auto" id="ml-auto" style="margin-left: 200px !important;">
@@ -86,13 +116,15 @@
 					<div class="right"></div>
 				</div>
 				<li id="head1" class="nav-item">
-					<a class="nav-link" href="javascript:void(0);"><i class="fas fa-tachometer-alt"></i>Dashboard</a>
+					<a class="nav-link" href="/"><i class="fas fa-tachometer-alt"></i>Dashboard</a>
 				</li>
 				<li id="head2" class="nav-item">
 					<a class="nav-link" href="/home"><i class="far fa-address-book"></i>Address Book</a>
 				</li>
 				<li id="head3" class="nav-item">
-					<a class="nav-link" href="javascript:void(0);"><i class="far fa-clone"></i>Components</a>
+					<a class="nav-link" href="/generate">
+						<i class="bi bi-magic"></i>Generate
+					</a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" href="javascript:void(0);"><i class="far fa-calendar-alt"></i>Calendar</a>

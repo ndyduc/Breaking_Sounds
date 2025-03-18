@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, session, request, jsonify, Blueprint
+from flask import *
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from google.auth.transport.requests import Request
@@ -35,7 +35,7 @@ flow = Flow.from_client_config(
 google = Blueprint('google', __name__, url_prefix='/')
 
 
-@google.route('/login')
+@google.route('/login_gg')
 def login():
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -57,13 +57,16 @@ def callback():
             requests.Request(),
             GOOGLE_CLIENT_ID
         )
-        print(id_info)
+        # print(id_info)
         # Lưu thông tin người dùng vào session
         session['id'] = id_info['sub']
         session['google_id'] = id_info.get('sub')
         session['name'] = id_info.get('name')
         session['email'] = id_info.get('email')
         session['picture'] = id_info.get('picture')
+
+        user = get_user(id_info.get('sub'))
+        session['user_id'] = str(user['_id'])
 
         return redirect(url_for('google.profile'))
     except Exception as e:
@@ -76,16 +79,14 @@ def profile():
     if check_exist_user(session['email']):
         user = get_user(None, session['email'])
         session['user_id'] = str(user['_id'])
-        print(user['_id'])
-        return redirect(url_for('index'))
+        # return redirect(url_for('index'))
     else:
         user = insert_user(session['google_id'], session['name'], session['email'], None, session['picture'])
         session['user_id'] = user
-        print(user)
-
 
     if 'google_id' not in session:
-        return redirect(url_for('login'))
+        flash("Error when logging in with Google !")
+        return redirect(url_for('login_base'))
 
     return f'''
         <h1>Profile</h1>
