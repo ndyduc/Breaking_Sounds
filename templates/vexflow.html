@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+	<script src="https://www.verovio.org/javascript/3.0.0/verovio-toolkit.js"></script>
+	<title>Sheet</title>
+</head>
+<body>
+<div id="musicCanvas"></div> <!-- Vẽ sheet nhạc tại đây -->
+<div id="output"></div>
+<div id="out2"></div>
+<script>
+	var sheetData = {
+	{
+		sheet_data | tojson | safe
+	}
+	}
+	;
+	const {Renderer, Stave, StaveNote, Voice, Formatter} = Vex.Flow;
+	
+	function drawMusic(musicxml) {
+		try {
+			var vrvToolkit = new verovio.toolkit();
+			vrvToolkit.loadData(musicxml, {format: "musicxml", pageHeight: 10000, pageWidth: 7000});
+			var meiData = vrvToolkit.renderData();
+			console.log("MEI Data:", meiData);
+		} catch (error) {
+			console.error("Verovio Error:", error);
+		}
+		
+		// Vẽ sheet nhạc bằng VexFlow
+		const div = document.getElementById("musicCanvas");
+		const renderer = new Vex.Flow.Renderer(div, Vex.Flow.Renderer.Backends.SVG);
+		renderer.resize(600, 200);
+		const context = renderer.getContext();
+		
+		const stave = new Vex.Flow.Stave(10, 40, 500);
+		stave.addClef("treble").setContext(context).draw();
+		
+		// Dữ liệu giả lập (vì parse MEI cần xử lý phức tạp hơn)
+		const notes = [
+			new Vex.Flow.StaveNote({keys: ["c/4"], duration: "q"}),
+			new Vex.Flow.StaveNote({keys: ["d/4"], duration: "q"}),
+			new Vex.Flow.StaveNote({keys: ["e/4"], duration: "q"}),
+			new Vex.Flow.StaveNote({keys: ["f/4"], duration: "q"})
+		];
+		
+		const voice = new Vex.Flow.Voice({num_beats: 4, beat_value: 4});
+		voice.addTickables(notes);
+		new Vex.Flow.Formatter().joinVoices([voice]).format([voice], 450);
+		voice.draw(context, stave);
+	}
+	
+	drawMusic(sheetData.musicxml);
+</script>
+<script>
+	const {Renderer, Formatter, Stave, StaveNote, Accidental, Beam, Dot, StaveTie, Barline, Voice} = Vex.Flow;
+	
+	// Tạo renderer
+	const div = document.getElementById("output");
+	const renderer = new Renderer(div, Renderer.Backends.SVG);
+	renderer.resize(1400, 300); // Tăng chiều cao để có nhiều dòng
+	const context = renderer.getContext();
+	
+	const notes = [
+		dotted(new StaveNote({keys: ["e##/5"], duration: "8d"}).addModifier(new Accidental("##"))),
+		new StaveNote({keys: ["b/4"], duration: "16"}).addModifier(new Accidental("b")),
+		new StaveNote({keys: ["c/4"], duration: "8"}),
+		new StaveNote({keys: ["d/4"], duration: "16"}),
+		new StaveNote({keys: ["d/4"], duration: "16"}),
+		new StaveNote({keys: ["d/4"], duration: "q"}),
+		new StaveNote({keys: ["d/4"], duration: "q"}),
+		new StaveNote({keys: ["c/4"], duration: "q"}),
+		new StaveNote({keys: ["d/4"], duration: "q"}),
+		new StaveNote({keys: ["b/4"], duration: "qr"}),
+		new StaveNote({keys: ["c/4", "e/4", "g/4"], duration: "q"}),
+		new StaveNote({keys: ["c/4"], duration: "8"}),
+		new StaveNote({keys: ["d/4"], duration: "8"}),
+		new StaveNote({keys: ["b/4"], duration: "8"}),
+		new StaveNote({keys: ["c/4", "e/4", "g/4"], duration: "8"}),
+		new StaveNote({keys: ["b/4"], duration: "16"}).addModifier(new Accidental("b")),
+		new StaveNote({keys: ["c/4"], duration: "8"}),
+		new StaveNote({keys: ["d/4"], duration: "16"}),
+		new StaveNote({keys: ["d/4"], duration: "16"}),
+		new StaveNote({keys: ["d/4"], duration: "q"}),
+		new StaveNote({keys: ["d/4"], duration: "q"}),
+		new StaveNote({keys: ["c/4"], duration: "q"}),
+		new StaveNote({keys: ["d/4"], duration: "q"}),
+		new StaveNote({keys: ["b/4"], duration: "qr"}),
+		new StaveNote({keys: ["c/4", "e/4", "g/4"], duration: "q"}),
+		new StaveNote({keys: ["c/4"], duration: "8"}),
+		new StaveNote({keys: ["d/4"], duration: "8"}),
+		new StaveNote({keys: ["b/4"], duration: "8"}),
+		new StaveNote({keys: ["c/4", "e/4", "g/4"], duration: "8"})
+	];
+	// Chia nhóm các nốt nhạc
+	const chunkSize = 8; // Số nốt tối đa trong một dòng (tuỳ chỉnh)
+	const staveWidth = 600; // Độ rộng mỗi ô nhịp
+	const stavePadding = 50; // Khoảng cách giữa các dòng
+	
+	// Chia nốt thành từng nhóm nhỏ để vẽ từng dòng riêng biệt
+	for (let i = 0; i < notes.length; i += chunkSize) {
+		const stave = new Stave(10, 40 + (i / chunkSize) * stavePadding, staveWidth);
+		if (i === 0) stave.addClef("treble").addTimeSignature("4/4");
+		stave.setContext(context).draw();
+		
+		// Cắt lấy phần nốt của dòng hiện tại
+		const chunk = notes.slice(i, i + chunkSize);
+		
+		// Format và vẽ lên stave
+		const voice = new Voice({num_beats: 4, beat_value: 4}).addTickables(chunk);
+		new Formatter().joinVoices([voice]).format([voice], staveWidth - 50);
+		voice.draw(context, stave);
+	}
+	
+	function dotted(note) {
+		Dot.buildAndAttach([note]);
+		return note;
+	}
+</script>
+</body>
+</html>

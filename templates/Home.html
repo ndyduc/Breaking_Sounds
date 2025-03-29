@@ -1,11 +1,15 @@
 <!DOCTYPE html>
-{% include 'header.html' %}
-<html>
+{% if 'user_id' not in session %}
+    {% include 'support/header.html' %}
+{% else %}
+    {% include 'support/sidebar.html' %}
+{% endif %}
+<html lang="en">
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<title>Breaking Sounds</title>
-	<link rel="icon" href="../static/img/music_note.png"/>
+	<link rel="icon" href="../static/logo/music_note.png"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="description" content="Free HTML5 Website Template by freehtml5.co"/>
 	<meta name="keywords"
@@ -19,16 +23,53 @@
 	<link rel="stylesheet" href="../static/css/flexslider.css">
 	<link rel="stylesheet" href="../static/css/style.css">
 	
-	<script src="../static/js/"></script>
+	<script src="../static/js/modernizr-2.6.2.min.js"></script>
 	<script src="../static/js/respond.min.js"></script>
 	<script>
 		const element = document.getElementById('head1');
-		element.classList.add('active');
+		if (element) {
+		    element.classList.add('active');
+		}
+	</script>
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+		    let messages = document.querySelectorAll(".message");
+		
+		    messages.forEach((messageDiv) => {
+		        if (messageDiv.innerText.trim() !== "") {
+		            messageDiv.style.display = "flex"; // Hiển thị
+		            messageDiv.style.opacity = "1";
+		
+		            setTimeout(() => {
+		                messageDiv.style.opacity = "0"; // Làm mờ dần
+		                setTimeout(() => {
+		                    messageDiv.style.display = "none"; // Ẩn hoàn toàn
+		                }, 500);
+		            }, 10000); // 10 giây
+		        }
+		    });
+		});
 	</script>
 </head>
 <body>
-<div class="fh5co-loader"></div>
-
+{% for message in messages %}
+<div class="message" style="position: fixed;
+	display: none;
+	justify-content: center;
+	align-items: center;
+	width: 80%;
+	height: 50px;
+	border-radius: 30px;
+	color: rgb(77, 26, 116);
+	background: rgba(255, 255, 255, 0.80);
+	font-size: 22px;
+	font-family: 'Playfair Display', serif;;
+	top: 80px;
+	left: 10%;
+	text-align: center;
+	padding: 10px 120px;
+	z-index: 3;">{{ message|replace("\n", "<br>")|safe }}</div>
+{% endfor %}
 <div id="page">
 	<header id="fh5co-header" class="fh5co-cover js-fullheight" role="banner"
 	        style="background-image: url(../static/img/a4.webp);" data-stellar-background-ratio="0.5">
@@ -322,4 +363,4 @@
 </body>
 </html>
 
-{% include 'footer.html' %}
+{% include 'support/footer.html' %}

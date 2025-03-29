@@ -1,0 +1,153 @@
+<!DOCTYPE>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<link rel="stylesheet" href="/static/css/edit_profile.css">
+</head>
+
+<body>
+<div id="edit_profile">
+	<div class="edit_content">
+		<div id="main_edit">
+			<div id="avatar">
+				<input type="file" id="newuser-img" name="newuser-img" accept="image/*"
+				       style="display: none !important;">
+				<img src="{{ session.get('picture', '/static/img/me.png') }}"
+				     alt="User avatar" id="user_avatar"
+				     data-src="{{ session.get('picture', '../static/img/me.png') }}">
+				<label for="newuser-img" class="icon_back" id="edit_avatar">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+					     class="bi bi-pencil-fill penedit "
+					     viewBox="0 0 16 16">
+						<path
+							d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+					</svg>
+				</label>
+			</div>
+			<div class="info_user">
+				<span class="can-change" id="txtusername" data-username="{{ session.get('name', '') }}">{{ session.get('name', '') }}</span>
+				<svg id="editname" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+				     class="bi bi-pencil-fill penedit" viewBox="0 0 16 16" style="margin-top: 5px;">
+					<path
+						d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+				</svg>
+			</div>
+			<div class="info_user">
+				<span class="changebtn" id="txtpassword"> Change password</span>
+				<span class="changebtn" id="linkgg">Link to Gooogle</span>
+			</div>
+			<button type="button" id="done-edit">Done</button>
+		</div>
+	</div>
+</div>
+<script>
+	document.getElementById("linkgg").addEventListener("click", function () {
+		fetch("/link_to_gg", {
+			method: "GET",
+			credentials: "same-origin"
+		})
+			.then(response => response.json())
+			.then(data => {
+				if (data.linked) {
+					alert(data.message); // Hiển thị thông báo nếu đã liên kết với Google
+				} else if (data.redirect_url) {
+					window.location.href = data.redirect_url; // Chuyển hướng nếu chưa liên kết
+				}
+			})
+			.catch(error => console.error("Lỗi:", error));
+	});
+	
+	document.getElementById("editname").addEventListener("click", function () {
+		let span = document.getElementById("txtusername");
+		let currentText = span.innerText;
+		
+		// Tạo input để thay thế span
+		let input = document.createElement("input");
+		input.type = "text";
+		input.value = currentText;
+		input.className = "can-change";
+		input.style.borderRadius = "10px";
+		input.style.border = "0";
+		input.style.width = span.offsetWidth + "px"; // Giữ kích thước cũ
+		span.replaceWith(input);
+		input.focus();
+		
+		// Khi nhấn Enter hoặc mất focus, lưu lại giá trị
+		const saveChanges = () => {
+			let newText = input.value.trim() || currentText; // Nếu trống, giữ nguyên
+			let newSpan = document.createElement("span");
+			newSpan.className = "can-change";
+			newSpan.id = "txtusername";
+			newSpan.innerText = newText;
+			input.replaceWith(newSpan);
+		};
+		
+		// Xử lý khi người dùng nhấn Enter hoặc click ra ngoài
+		input.addEventListener("keypress", function (e) {
+			if (e.key === "Enter") saveChanges();
+		});
+		input.addEventListener("blur", saveChanges);
+	});
+	
+	document.addEventListener("DOMContentLoaded", function () {
+		const userAvatar = document.getElementById("user_avatar");
+		const sessionPicture = "{{ session.get('picture', '../static/img/me.png') }}";
+		
+		if (sessionPicture) {
+			userAvatar.src = sessionPicture;
+		}
+	});
+	
+	document.getElementById('newuser-img').addEventListener('change', function (event) {
+		const file = event.target.files[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = function (e) {
+				document.getElementById('user_avatar').src = e.target.result;
+			};
+			reader.readAsDataURL(file);
+		}
+	});
+	
+	document.getElementById("txtpassword").addEventListener("click", function () {
+		window.location.href = "/change_userpassword";
+	});
+	
+	document.getElementById("done-edit").addEventListener("click", function () {
+    let username = document.getElementById("txtusername").textContent.trim();
+    let sessionName = document.getElementById("txtusername").getAttribute("data-username");
+    let imgInput = document.getElementById("newuser-img");
+    let img = imgInput.files.length > 0 ? imgInput.files[0] : null;
+
+    if (username !== sessionName || img !== null) {
+        let formData = new FormData();
+        formData.append("username", username);
+        
+        if (img) {
+            formData.append("profile_img", img);
+        }
+
+        fetch("/change_info", {
+            method: "POST",
+            credentials: "same-origin",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert(data.message);
+                document.getElementById("change_profile").click();
+            } else {
+                window.location.href = '/';
+            }
+        })
+        .catch(error => console.error("Lỗi:", error));
+    } else {
+        console.log("Không có thay đổi nào, không gửi yêu cầu.");
+		document.getElementById('profile').style.display = 'none';
+    }
+});
+</script>
+</body>
+</html>

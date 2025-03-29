@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+	<link rel="stylesheet" href="/static/css/sidebar.css">
+	<title></title>
+</head>
+<body>
+<div id="profile"
+     style="display: none; position: fixed; z-index: 5; width: 100%; height: 100vh; transition: 0.5s ease-out"></div>
+<div id="nav-bar">
+	<input id="nav-toggle" type="checkbox"/>
+	<div id="nav-header">
+		<div id="nav-title" style="display: flex; justify-content: center; align-items: center">
+			<label>
+				<img style="color: white; width: 25px; height: auto;"
+				     src="/static/logo/music_note_white.png" alt="">
+			</label>
+			<a style="padding-left: 10px; font-size: 20px; font-family: 'Satisfy', cursive; font-weight: 300;" href="/">
+				Breaking Sounds
+			</a>
+		</div>
+		<label for="nav-toggle"><span id="nav-toggle-burger" style="rotate: 180deg"></span></label>
+		<hr/>
+	</div>
+	<div id="nav-content">
+		<div class="nav-button"><i class="fas fa-atom"></i><span>Generate</span></div>
+		<div class="nav-button"><i class="fas fa-images"></i><span>Assets</span></div>
+		<div class="nav-button"><i class="fas fa-thumbtack"></i><span>Pinned Items</span></div>
+		<hr/>
+		<div class="nav-button"><i class="fas fa-archway"></i><span>Libary</span></div>
+		<div class="nav-button"><i class="fas fa-music"></i><span>Pitch detector</span></div>
+		<div class="nav-button"><i class="fas fa-guitar"></i><span>Practice</span></div>
+		<div class="nav-button"><i class="fas fa-book-open"></i></i><span>Spark</span></div>
+		<hr/>
+		<div class="nav-button"><i class="fas fa-gem"></i><span>Codepen Pro</span></div>
+		<div id="nav-content-highlight"></div>
+	</div>
+	<input id="nav-footer-toggle" type="checkbox"/>
+	<div id="nav-footer">
+		<div id="nav-footer-heading">
+			<div id="nav-footer-avatar">
+				<img id="user-img" src="/static/img/idga.png" alt="Usr Image"/>
+			</div>
+			<div id="nav-footer-titlebox">
+				<a id="nav-footer-title" target="_blank" style="width: 150px;">_ndyduc_</a>
+				<span id="nav-footer-subtitle"></span></div>
+			<label for="nav-footer-toggle"><i class="fas fa-caret-up"></i></label>
+		</div>
+		<div id="nav-footer-content">
+			<div id="edit-profile">
+				<i class="fa-solid fa-pen-to-square"></i>
+				<span id="change_profile">Change profile</span>
+			</div>
+			<div id="logout">
+				<i class="fa-solid fa-arrow-right-from-bracket"></i>
+				<span>Log out</span>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	document.querySelector(".nav-button").addEventListener("click", function () {
+		window.location.href = "/generate";
+	});
+</script>
+<script>
+	document.getElementById("logout").addEventListener("click", function () {
+		fetch("/user_logout", {
+			method: "GET",
+			credentials: "same-origin" // Đảm bảo gửi cookie session
+		})
+			.then(response => {
+				if (response.redirected) {
+					window.location.href = response.url; // Chuyển hướng nếu có redirect
+				}
+			})
+			.catch(error => console.error("Lỗi khi logout:", error));
+	});
+</script>
+<script>
+	document.getElementById("change_profile").addEventListener("click", async () => {
+		try {
+			const profile = document.getElementById("profile");
+			if (profile.style.display === "none" || profile.style.display === "") {
+				const response = await fetch("/get_change_profile");
+				if (!response.ok) throw new Error("Lỗi khi tải HTML");
+				
+				const htmlContent = await response.text();
+				
+				// Chèn nội dung vào profile
+				profile.innerHTML = htmlContent;
+				profile.style.display = "block"; // Hiển thị
+				
+				// Tìm và thực thi tất cả script trong nội dung mới
+				profile.querySelectorAll("script").forEach(oldScript => {
+					const newScript = document.createElement("script");
+					newScript.textContent = oldScript.textContent; // Copy nội dung script
+					document.body.appendChild(newScript); // Thêm vào để thực thi
+					document.body.removeChild(newScript); // Xóa sau khi chạy để tránh trùng lặp
+				});
+			} else {
+				profile.style.display = "none"; // Ẩn đi
+			}
+		} catch (error) {
+			console.error("Lỗi:", error);
+		}
+	});
+	document.querySelector('label[for="nav-toggle"]').addEventListener("click", function () {
+		let footerToggle = document.getElementById("nav-footer-toggle");
+		
+		if (footerToggle.checked) {
+			footerToggle.checked = false;
+		}
+	});
+</script>
+<script>
+	let userName = "{{ session.get('name', '') }}";
+	let userPicture = "{{ session.get('picture', '') }}";
+	let email = "{{ session.get('email', '' ) }}";
+	
+	if (userName) {
+		document.getElementById("nav-footer-title").textContent = userName;
+	}
+	if (email) {
+		document.getElementById("nav-footer-subtitle").textContent = email;
+	}
+	if (userPicture) {
+		document.getElementById("user-img").src = userPicture;
+	}
+</script>
+</body>
+</html>

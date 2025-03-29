@@ -4,7 +4,12 @@ from routes.login_google import google
 from routes.sounds import sounds
 from src.data_connecter import *
 from src.send_email import send_email, send_forgot
+
+from PIL import Image
 import os
+import base64
+import io
+import hashlib
 
 app = Flask(__name__)
 app.secret_key = os.getenv('MY_KEY')
@@ -16,7 +21,8 @@ app.register_blueprint(sounds)
 @app.route('/')
 def index():
     # Check_connect()
-    return render_template('Home.html')
+    messages = get_flashed_messages()
+    return render_template('Home.html', messages=messages)
 
 
 @app.route('/loginbase', methods=['GET', 'POST'])
@@ -59,7 +65,14 @@ def loggin():
             flash("Please enter your password !")
             return redirect(url_for('login_base'))
         if verify_password(email, password):
-            user = get_user(email)
+            user = get_user(None, email)
+            session['name'] = user["Username"]
+            session['email'] = user["Email"]
+            session['picture'] = (
+                None if user.get("Avatar_url") is None
+                else user["Avatar_url"] if isinstance(user["Avatar_url"], str) and user["Avatar_url"].startswith("http")
+                else decode_img(user["Avatar_url"])
+            )
             session['user_id'] = str(user["_id"])
             return redirect(url_for('index'))
         else:
@@ -74,7 +87,13 @@ def loggin():
         else:
             return redirect(url_for('forgot'))
     else:
-        return redirect(url_for('/'))
+        return redirect(url_for('index'))
+
+
+@app.route('/user_logout')
+def user_logout():
+    session.clear()
+    return redirect(url_for('index'))
 
 
 @app.route('/verify/<token>')
@@ -97,7 +116,7 @@ def verify_email(token):
     session.pop('verify_email', None)
     session.pop('verify_username', None)
 
-    return render_template('sidebar.html', username=saved_username, email=saved_email)
+    return render_template('support/sidebar.html', username=saved_username, email=saved_email)
 
 
 @app.route('/forgot')
@@ -113,6 +132,19 @@ def forgot():
         flash("Error when sending email !")
         return redirect(url_for('login_base'))
         # return redirect(url_for('authorize'))
+
+
+@app.route('/change_userpassword')
+def change_userpassword():
+    email = session.get('email')
+    user = get_user(None, email)
+
+    if send_forgot(email, user.get('Username')):
+        flash("Check your email to change password !")
+        return redirect(url_for('index'))
+    else:
+        flash("Error when sending email !")
+        return redirect(url_for('index'))
 
 
 @app.route('/forgot/<token>')
@@ -148,7 +180,7 @@ def change_pass():
         return jsonify({"success": False, "message": "User not authenticated!"})
 
     session['user_id'] = str(user.get('_id'))
-    user_up = update_user(user.get('_id'), None, None, pass1, None, None, None, None, None, None)
+    user_up = update_user(user.get('_id'),None, None, None, pass1, None, None, None, None, None, None)
 
     if user_up == {"success": "User updated successfully"}:
         return jsonify({
@@ -162,7 +194,81 @@ def change_pass():
 
 @app.route('/change_password', methods=['GET', 'POST'])
 def change_password():
-    return render_template('change_password.html')
+    return render_template('support/change_password.html')
+
+
+@app.route("/change_info", methods=["POST"])
+def change_info():
+    try:
+        if 'user_id' not in session:
+            return jsonify({"success": False, "message": "Can't identify user!"})
+
+        user_id = session['user_id']
+        new_username = request.form.get("username")
+        profile_img = request.files.get("profile_img")
+
+        if profile_img:
+            try:
+                file_size = len(profile_img.read())
+                profile_img.seek(0)
+
+                img = Image.open(io.BytesIO(profile_img.read()))
+                img_bytes = io.BytesIO()
+
+                if file_size > 5 * 1024 * 1024:  # 5MB
+                    img.save(img_bytes, format="JPEG", quality=50)
+                else:
+                    img.save(img_bytes, format="JPEG")
+
+                img_binary = img_bytes.getvalue()
+            except Exception as e:
+                return jsonify({"success": False, "message": f"Image processing error: {str(e)}"})
+        else:
+            img_binary = None
+
+        user = update_user(user_id, None, new_username, None, None,  img_binary)
+        user_up = get_user(None, None, session.get('user_id'))
+
+        session['name'] = user_up['Username']
+        img_bi = user_up['Avatar_url']
+        img_path = decode_img(img_bi)
+
+        session['picture'] = img_path
+        if user['success'] is None:
+            return jsonify({"success": False, "message": "Error updating infomation !"})
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": "Không có thông tin nào thay đổi."})
+
+
+def decode_img(img_bytes):
+    try:
+        if not isinstance(img_bytes, bytes):
+            print("Lỗi: Dữ liệu không phải là dạng nhị phân.")
+            return None
+
+        UPLOAD_FOLDER = os.path.join("static/Users", session.get('user_id'), 'info')
+        img_path = os.path.join(UPLOAD_FOLDER, "profile.jpg")
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+        # Tính hash SHA-256 của ảnh mới
+        new_img_hash = hashlib.sha256(img_bytes).hexdigest()
+
+        # Kiểm tra xem ảnh cũ có giống ảnh mới không
+        if os.path.exists(img_path):
+            with open(img_path, "rb") as f:
+                existing_img_hash = hashlib.sha256(f.read()).hexdigest()
+            if existing_img_hash == new_img_hash:
+                print("Anh co san !")
+                return img_path
+
+        with open(img_path, "wb") as f:
+            f.write(img_bytes)
+
+        return img_path  # Trả về đường dẫn ảnh mới
+    except Exception as e:
+        print(f"Lỗi không xác định: {str(e)}")
+        return None
 
 
 @app.route('/authorize')
@@ -241,7 +347,7 @@ def credentials_to_dict(credentials):
 
 @app.route('/home')
 def home():
-    return render_template('user_home.html')
+    return render_template('home.html')
 
 
 @app.route("/check_session_user_id")
@@ -249,6 +355,30 @@ def check_session():
     if "user_id" in session:
         return jsonify({"logged_in": True})
     return jsonify({"logged_in": False})
+
+
+@app.route('/get_notes', methods=['GET'])
+def get_notes():
+    notes = [
+        {"keys": ["c/4"], "duration": "q"},
+        {"keys": ["d/4"], "duration": "q"},
+        {"keys": ["e/4"], "duration": "q"},
+        {"keys": ["f/4"], "duration": "q"}
+    ]
+    return jsonify(notes)
+
+
+@app.route("/get_change_profile")
+def your_route():
+    return render_template("support/edit_profile.html")  # Trả về nội dung HTML
+
+
+@app.route("/link_to_gg")
+def link_to_gg():
+    if 'google_id' in session:
+        return jsonify({"linked": True, "message": "Account is already linked to Google account."})
+    else:
+        return jsonify({"linked": False, "redirect_url": url_for('google.login')})
 
 
 if __name__ == '__main__':

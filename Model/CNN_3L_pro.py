@@ -2,7 +2,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch
 
-import librosa
+import librosa.feature
 import numpy as np
 import pandas as pd
 import torch.utils.data as data
@@ -61,11 +61,14 @@ class MusicDataset(data.Dataset):
         return self.X[idx], self.y[idx]
 
 
-def load_wav_csv(wav_path, csv_path, sr=44100, hop_length=512):
+def load_wav_csv(wav_path, csv_path=None, sr=44100, hop_length=512):
     y, sr = librosa.load(wav_path, sr=sr)
 
     mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, hop_length=hop_length)
     mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
+
+    if csv_path is None:
+        return torch.tensor(mel_spec_db, dtype=torch.float32).unsqueeze(0)  # (1, 128, time)
 
     df = pd.read_csv(csv_path)
 
@@ -84,9 +87,7 @@ def load_wav_csv(wav_path, csv_path, sr=44100, hop_length=512):
         start = max(0, row['start_frame'])
         end = min(num_frames, row['end_frame'])
         note = row['note']
-
-        # Gán 1 cho nốt xuất hiện tại các frames tương ứng
-        y_train[start:end, note] = 1
+        y_train[start:end, note] = 1  # Đánh dấu các frames có nốt này
 
     def create_windows_torch(X, y, window_size=128, step=21):
         X_windows, y_windows = [], []
@@ -96,12 +97,10 @@ def load_wav_csv(wav_path, csv_path, sr=44100, hop_length=512):
             if center_index < len(y):
                 y_windows.append(y[center_index, :])
 
-        # Gộp list thành numpy array trước khi chuyển sang tensor
         return torch.tensor(np.array(X_windows), dtype=torch.float32), torch.tensor(np.array(y_windows), dtype=torch.long)
 
     X_train, y_train = create_windows_torch(mel_spec_db, y_train)
 
-    # Thêm kênh cho Conv2D
     X_train = X_train.unsqueeze(1)  # (batch, 1, 128, 128)
     return X_train, y_train
 
@@ -116,3 +115,141 @@ def check_csv():
     print(f"Sample rate (sr): {sr}")
     print(f"Số mẫu trong file WAV: {len(y)}")
     print(f"Số frame hợp lý (num_frames): {num_frames}")
+
+
+def midi_to_note(midi_note):
+    return librosa.midi_to_note(midi_note)
+
+
+def predict_notes(wav_path, model, device="cpu", sr=44100, hop_length=512, window_size=128, step=21):
+    X_windows = load_wav_csv(wav_path, None, sr=sr, hop_length=hop_length)
+    X_windows = X_windows.to(device)
+
+    batch_size = 32  # Giảm batch size để tránh hết RAM
+    num_batches = len(X_windows) // batch_size + 1
+    predictions = []
+
+    with torch.no_grad():
+        for i in range(num_batches):
+            batch = X_windows[i * batch_size:(i + 1) * batch_size]
+            if batch.shape[0] == 0:
+                continue  # Bỏ qua batch rỗng cuối cùng
+            batch = batch.unsqueeze(1)
+            outputs = model(batch)
+            predictions.append((outputs > 0.5).float().cpu().numpy())
+
+    predictions = np.concatenate(predictions, axis=0)  # Ghép lại thành một mảng
+
+    # Xử lý duration của nốt nhạc
+    frame_duration = step * hop_length / sr  # Khoảng thời gian của mỗi frame
+    timestamps = [(i * step * hop_length / sr) for i in range(len(predictions))]
+
+    active_notes = {}  # Lưu trạng thái nốt đang được phát
+    note_events = []  # Lưu kết quả cuối cùng
+
+    for i, (time, pred) in enumerate(zip(timestamps, predictions)):
+        notes = np.where(pred == 1)[0]  # Lấy danh sách các nốt có giá trị 1
+
+        new_active_notes = set(notes)  # Chuyển sang tập hợp để dễ kiểm tra
+
+        # Kiểm tra nốt nào vẫn tiếp tục hoặc mới bắt đầu
+        for note in new_active_notes:
+            if note not in active_notes:
+                active_notes[note] = {"start": time, "duration": frame_duration}
+            else:
+                active_notes[note]["duration"] += frame_duration
+
+        # Kiểm tra nốt nào đã kết thúc
+        ended_notes = set(active_notes.keys()) - new_active_notes
+        for note in ended_notes:
+            note_events.append({
+                "note": midi_to_note(note),
+                "start_time": active_notes[note]["start"],
+                "duration": active_notes[note]["duration"]
+            })
+            del active_notes[note]
+
+    # Ghi nhận các nốt còn sót lại (kết thúc ở frame cuối)
+    for note, info in active_notes.items():
+        note_events.append({
+            "note": midi_to_note(note),
+            "start_time": info["start"],
+            "duration": info["duration"]
+        })
+
+    return note_events
+
+
+def CNN_predict(wav_path, model, device="cpu", sr=44100, hop_length=512, window_size=64, step=21):
+    print(f"\nĐang dự đoán file: {wav_path}")
+
+    y, sr = librosa.load(wav_path, sr=sr)
+
+    mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, hop_length=hop_length)
+    mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
+
+    # Chia thành các cửa sổ (windows)
+    X_windows = []
+    timestamps = []
+    frame_duration = step * hop_length / sr  # Khoảng thời gian của mỗi frame
+
+    for i in range(0, mel_spec_db.shape[1] - window_size, step):
+        X_windows.append(mel_spec_db[:, i:i + window_size])
+        timestamps.append(i * hop_length / sr)  # Thời gian tính bằng giây
+
+    # Chuyển thành tensor
+    X_windows = torch.tensor(np.array(X_windows), dtype=torch.float32).unsqueeze(1).to(device)
+
+    model.eval()
+
+    batch_size = 32  # Có thể giảm xuống 16 nếu vẫn hết RAM
+    num_batches = len(X_windows) // batch_size + 1
+    predictions = []
+
+    with torch.no_grad():
+        for i in range(num_batches):
+            batch = X_windows[i * batch_size:(i + 1) * batch_size]
+            if batch.shape[0] == 0:
+                continue
+            outputs = model(batch)
+            predictions.append((outputs > 0.5).float().cpu().numpy())
+
+    predictions = np.concatenate(predictions, axis=0)
+
+    # Xử lý duration của nốt nhạc
+    active_notes = {}  # Lưu trạng thái nốt đang được phát
+    note_events = []  # Lưu kết quả cuối cùng
+
+    for i, (time, pred) in enumerate(zip(timestamps, predictions)):
+        notes = np.where(pred == 1)[0]  # Lấy danh sách các nốt có giá trị 1
+
+        new_active_notes = set(notes)  # Chuyển sang tập hợp để dễ kiểm tra
+
+        # Kiểm tra nốt nào vẫn tiếp tục hoặc mới bắt đầu
+        for note in new_active_notes:
+            if note not in active_notes:
+                active_notes[note] = {"start": time, "duration": frame_duration}
+            else:
+                active_notes[note]["duration"] += frame_duration
+
+        # Kiểm tra nốt nào đã kết thúc
+        ended_notes = set(active_notes.keys()) - new_active_notes
+        for note in ended_notes:
+            note_events.append({
+                "note": note,
+                "start": active_notes[note]["start"],
+                "duration": active_notes[note]["duration"]
+            })
+            del active_notes[note]
+
+    # Ghi nhận các nốt còn sót lại (kết thúc ở frame cuối)
+    for note, info in active_notes.items():
+        note_events.append({
+            "note": note,
+            "start": info["start"],
+            "duration": info["duration"]
+        })
+    # print(note_events)
+    return note_events
+    # for idx, event in enumerate(sorted(note_events, key=lambda x: x["start"])):
+    #     print(f"{idx+1}. 🎵 Note {event['note']} - Start: {event['start']:.2f}s, Duration: {event['duration']:.2f}s")

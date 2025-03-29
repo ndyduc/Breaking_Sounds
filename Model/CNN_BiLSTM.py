@@ -223,7 +223,7 @@ def train_on(model, optimizer, criterion, wav_path, csv_path, test_wav_files, te
 def predict(model, wav_path, device, hop_length=512, sr=44100, window_size=128, step=11):
     """Args:
         model: Mô hình PyTorch đã được huấn luyện.
-        wav_path (str): Đường dẫn đến file WAV.
+        wav_path: Đường dẫn đến file WAV.
         device: Thiết bị tính toán (cpu hoặc cuda).
         hop_length (int): Khoảng cách giữa các frames.
         sr (int): Sample rate.

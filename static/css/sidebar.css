@@ -14,6 +14,10 @@ html, body {
 	/*background: var(--background);*/
 }
 
+#fh5co-slider{
+	padding-right: 10rem !important;
+}
+
 #nav-toggle:checked ~ #nav-header {
 	width: calc(var(--navbar-width-min) - 16px);
 }
@@ -65,7 +69,7 @@ html, body {
 }
 
 #nav-bar {
-	position: absolute;
+	position: fixed;
 	right: 5px;
 	top: 8px;
 	height: calc(100% - 1vw);
@@ -77,7 +81,7 @@ html, body {
 	font-family: Verdana, Geneva, Tahoma, sans-serif;
 	overflow: hidden;
 	user-select: none;
-	z-index: 2;
+	z-index: 6;
 }
 
 #nav-bar hr {
@@ -223,27 +227,33 @@ label[for=nav-toggle] {
 	transition: color 0.2s;
 }
 
-#logout{
+#logout, #edit-profile{
 	position: relative;
 	margin-left: 8px;
+	width: 230px;
 	height: 46px;
 	display: flex;
-	padding-left: 8px;
+	padding-left: 20px;
 	border-radius: 15px;
 	align-items: center;
 	color: var(--navbar-light-secondary);
 	direction: ltr;
 	cursor: pointer;
+	font-size: 18px;
 	z-index: 1;
 	transition: color 0.2s;
 }
 
-#logout:hover{
+#logout>i , #edit-profile>i {
+	font-size: 22px;
+}
+
+#logout:hover, #edit-profile:hover{
 	color: black;
 	background-color: var(--background);
 }
 
-#logout span{
+#logout span, #edit-profile>span{
 	padding-left: 16px;
 }
 
@@ -376,7 +386,7 @@ label[for=nav-toggle] {
 }
 
 #nav-footer-toggle:checked + #nav-footer {
-	height: 18%;
+	height: 23%;
 	min-height: 54px;
 }
 
@@ -393,6 +403,10 @@ label[for=nav-footer-toggle] {
 	align-items: center;
 	cursor: pointer;
 	transition: transform 0.2s, opacity 0.2s;
+}
+
+label[for="nav-toggle"]:has(:active) + label[for="nav-footer-toggle"] {
+    pointer-events: auto;
 }
 
 #nav-footer-content {
@@ -413,3 +427,18 @@ label[for=nav-footer-toggle] {
 	border-radius: 99px;
 	background-color: var(--background);
 }
+
+#nav-footer-content {
+    scrollbar-width: none; /* Ẩn scrollbar trên Firefox */
+    -ms-overflow-style: none; /* Ẩn scrollbar trên IE và Edge */
+}
+
+#nav-footer-content::-webkit-scrollbar {
+    display: none; /* Ẩn scrollbar trên Chrome, Safari, Edge Chromium */
+}
+
+.nav-button.active {
+    color: var(--navbar-light-secondary);
+}
+
+

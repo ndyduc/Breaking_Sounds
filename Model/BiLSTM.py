@@ -82,9 +82,9 @@ def load_wav_csv(wav_path, csv_path, sr=44100, hop_length=512, n_mels=128, n_mfc
     return X_train, y_notes, y_instr
 
 
-class LSTM(nn.Module):
+class BiLSTM(nn.Module):
     def __init__(self, input_size=252, hidden_dim=256, num_layers=2, num_notes=128, num_instruments=128):
-        super(LSTM, self).__init__()
+        super(BiLSTM, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_dim, num_layers, batch_first=True, bidirectional=True, dropout=0.1)
         self.fc_notes = nn.Linear(hidden_dim * 2, num_notes)
         self.fc_instr = nn.Linear(hidden_dim * 2, num_instruments)
@@ -149,3 +149,7 @@ def train_on_wav(model, optimizer, criterion, wav_path, csv_path, epochs=10, bat
         model.train()
 
     torch.save(model.state_dict(), "../Trained/BiLSTM.pth")
+
+
+def predict_note(wav_path, model, devide, hoplength=512, sr=44100):
+    pass

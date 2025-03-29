@@ -121,11 +121,12 @@ def check_exist_user(email):
     return user is not None
 
 
-def update_user(user_id, username=None, email=None, password=None, avatar_url=None, bio=None, organization=None, city=None, country=None, whatsapp=None):
+def update_user(user_id, id_google=None, username=None, email=None, password=None, avatar_url=None, bio=None, organization=None, city=None, country=None, whatsapp=None):
     if not ObjectId.is_valid(str(user_id)):
         return {"error": "Invalid ObjectId"}
 
     update_fields = {
+        "ID_google": id_google,
         "Username": username,
         "Email": email,
         "Password": generate_password_hash(password) if password else None,
@@ -149,5 +150,7 @@ def update_user(user_id, username=None, email=None, password=None, avatar_url=No
 
     if result.matched_count == 0:
         return {"error": "User not found"}
+    elif result.modified_count == 0:
+        return {"warning": "No changes were made"}
 
     return {"success": "User updated successfully"}

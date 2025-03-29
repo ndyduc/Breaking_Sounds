@@ -6,6 +6,11 @@
   user-select: none;
 }
 
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  display: none;
+}
+		
+
 a {
   color: #fff;
   text-decoration: none;
@@ -16,7 +21,7 @@ body {
   padding: 0;
   height: 100vh;
   color: white;
-  background: black;
+  background: black !important;
   font-family: "Cormorant Garamond", serif;
   text-transform: uppercase;
 }

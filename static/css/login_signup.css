@@ -63,7 +63,7 @@ body {
 	background-image: url("../img/BG_login.jpg");
 	background-size: cover;
 	background-position: 50%;
-	animation: bg 3s infinite;
+	/*animation: bg 3s infinite;*/
 }
 
 @keyframes bg {
@@ -106,7 +106,7 @@ body {
 
 .label_name:before, .label_mail:before, .label_pass:before {
 	position: absolute;
-	right: 0px;
+	right: 0;
 	top: 10px;
 	transition: color .4s cubic-bezier(1, 0, 0, 1);
 }

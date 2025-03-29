@@ -4,17 +4,28 @@ import subprocess
 import base64
 from io import BytesIO
 import time
+import urllib.parse
+import re
 
 import librosa
 import matplotlib.pyplot as plt
 from flask import *
 from werkzeug.utils import secure_filename
 import numpy as np
+from collections import defaultdict
+import music21 as m21
+from music21 import converter, instrument
+import torch
+from music21 import metadata
 
 from src.data_connecter import *
+import Model.CNN_3L_pro
+import Model.CNN_BiLSTM
+import Model.BiLSTM
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Lấy thư mục cha của `router`
-DATA_LOGS_DIR = os.path.join(BASE_DIR, "logs/Users")  # Đảm bảo logs nằm ngoài router
+DATA_LOGS_DIR = os.path.join(BASE_DIR, "static/Users")  # Đảm bảo logs nằm ngoài router
+Trained_DiR = os.path.join(BASE_DIR, "Trained")
 
 sounds = Blueprint('sounds', __name__, url_prefix='/')
 
@@ -34,9 +45,6 @@ def upload_file():
 
 	user_id = session.get("user_id") if session.get("user_id") else str(int(time.time()))
 
-	if file.filename == "":
-		return jsonify({"error": "No selected file"}), 400
-
 	filename = secure_filename(file.filename)
 	user_folder = os.path.join(DATA_LOGS_DIR, user_id, "uploads")
 	os.makedirs(user_folder, exist_ok=True)
@@ -44,7 +52,7 @@ def upload_file():
 
 	file.save(file_path)
 
-	result_path = isolate_audio(file_path, user_id)
+	result_path = isolate_audio(file_path, user_id, False)
 	if result_path is None or not os.path.exists(result_path):
 		return jsonify({"error": "Không tạo được file vocals.mp3"}), 500
 
@@ -122,6 +130,182 @@ def save_vocals():
 		return jsonify({"status": False, "message": str(e)})
 
 
+@sounds.route("/CNN_basic_generate", methods=["POST"])
+def CNN_basic_generate():
+	if "file" not in request.files:
+		return "No file uploaded", 400
+
+	file = request.files["file"]
+
+
+@sounds.route("/result_sheet", methods=["POST"])
+def result_sheet():
+	try:
+		if "file_up" not in request.files:
+			return "No file uploaded", 400
+
+		file = request.files["file_up"]
+		modelname = request.form.get("modelname")
+
+		user_id = session.get("user_id") if session.get("user_id") else str(int(time.time()))
+
+		filename = secure_filename(file.filename)
+		user_folder = os.path.join(DATA_LOGS_DIR, user_id, "uploads")
+		os.makedirs(user_folder, exist_ok=True)
+		file_path = os.path.join(user_folder, filename)
+
+		file.save(file_path)
+
+		melodi_path = isolate_audio(file_path, user_id, True)
+		# melodi_path = "/Users/macbook/Downloads/Z-Python/Breaking Sounds/logs/Users/67ab9e445844b59dd13578ab/local_voice/Because_Of_You__Violin__Josh_Vietti/other.wav"
+		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+		if modelname == "CNN":
+			model = Model.CNN_3L_pro.CNN_Pro().to(device)
+			checkpoint = torch.load(os.path.join(Trained_DiR, "CNN_Pro.pth"), map_location=device, weights_only=True)
+			model.load_state_dict(checkpoint['model_state_dict'])
+			model.eval()
+
+			notes_predict = Model.CNN_3L_pro.CNN_predict(melodi_path, model, device=device)
+
+		elif modelname == "BiLSTM":
+			model = Model.BiLSTM.BiLSTM().to(device)
+			checkpoint = torch.load("../Trained/BiLSTM.pth", map_location=device)
+			model.load_state_dict(checkpoint['model_state_dict'])
+			model.eval()
+
+			notes_predict = Model.BiLSTM.predict_note(melodi_path, model, device)
+
+		elif modelname == "CNN_BiLSTM":
+			model = Model.CNN_BiLSTM.CNN_BiLSTM().to(device)
+			checkpoint = torch.load("../Trained/CNN_BiLSTM.pth", map_location=device)
+			model.load_state_dict(checkpoint['model_state_dict'])
+			model.eval()
+
+			notes_predict = Model.CNN_BiLSTM.predict(model, melodi_path, device=device)
+		else:
+			return jsonify({"status": False, "message": "Model does not exist"}), 500
+
+		tempo, pulse = get_tempo_pulse(melodi_path, 44100)
+		note_data = process_notes_sum(notes_predict, tempo)
+
+		result_path = convert_to_musicxml(note_data, tempo, pulse, user_id, filename)
+
+		return render_template("sheet_music.html", result_path=result_path)
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
+
+
+@sounds.route("/get_sheet")
+def get_sheet():
+	file_path = request.args.get("path")
+	file_path = urllib.parse.unquote(file_path)
+
+	if not file_path or not os.path.exists(file_path):
+		return jsonify({"error": "File không tồn tại"}), 404
+
+	try:
+		with open(file_path, "r", encoding="utf-8") as f:
+			return f.read(), 200
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
+
+
+def convert_to_musicxml(note_data, tempo, pulse, user_id, filename):
+	"""Args:
+		note_data (list): Danh sách dict chứa thông tin nốt nhạc.
+		tempo (int): Tempo của bản nhạc.
+		pulse (str): Nhịp (vd: "4/4", "3/4").
+		user_id (str): User ID.
+		filename (str) : filename
+
+	Returns:
+		dict: Chứa MusicXML dưới dạng chuỗi hoặc lỗi.
+	"""
+	try:
+		score = m21.stream.Score()
+		part = m21.stream.Part()
+
+		# Định nghĩa nhịp
+		time_signature = m21.meter.TimeSignature(pulse)
+		part.append(time_signature)
+
+		# Thêm tempo
+		metronome = m21.tempo.MetronomeMark(number=tempo)
+		part.append(metronome)
+
+		last_end_beat = 0  # Thời gian kết thúc của nốt trước
+
+		for note_info in note_data:
+			midi_number = note_info["note"]
+			start_beat = note_info["start_beat"]
+			note_value = note_info["note_value"]
+
+			# Chuyển `note_value` sang duration (nếu có)
+			duration_beat = NOTE_DURATIONS.get(note_value, 1.0)
+
+			# Nếu có khoảng trống, thêm dấu lặng
+			if start_beat > last_end_beat:
+				rest_duration = start_beat - last_end_beat
+				rest = m21.note.Rest()
+				rest.duration = m21.duration.Duration(rest_duration)
+				part.append(rest)
+
+			# Xử lý tied notes
+			if "-" in note_value:  # Ví dụ: "tied_quarter-sixteenth"
+				tied_notes = note_value.split("-")
+				for i, tied_value in enumerate(tied_notes):
+					duration = NOTE_DURATIONS.get(tied_value.replace("tied_", ""), 1.0)
+					note = m21.note.Note(midi_number)
+					note.duration = m21.duration.Duration(duration)
+
+					if i == 0:
+						note.tie = m21.tie.Tie("start")
+					elif i == len(tied_notes) - 1:
+						note.tie = m21.tie.Tie("stop")
+					else:
+						note.tie = m21.tie.Tie("continue")
+
+					part.append(note)
+			else:
+				# Tạo nốt nhạc bình thường
+				note = m21.note.Note(midi_number)
+				note.duration = m21.duration.Duration(duration_beat)
+				part.append(note)
+
+			last_end_beat = start_beat + duration_beat
+
+		name, _ = os.path.splitext(filename)
+
+		# Thêm Part vào Score
+		score.append(part)
+
+		# Chuẩn hóa trước khi lưu
+		score.makeNotation()
+		# Tạo metadata
+		score.metadata = metadata.Metadata()
+		score.metadata.title = name
+		score.metadata.composer = "_ndyduc_ genetive"
+
+		melody_path = os.path.join(DATA_LOGS_DIR, user_id, "musicxml", name + ".musicxml")
+		os.makedirs(os.path.join(DATA_LOGS_DIR, user_id, "musicxml"), exist_ok=True)
+
+		score.write(fmt="musicxml", fp=melody_path)
+
+		with open(melody_path, "r", encoding="utf-8") as f:
+			xml_un = f.read()
+
+		xml_un = re.sub(r"<part-name />", "<part-name> </part-name>", xml_un, flags=re.DOTALL)
+		xml_un = re.sub(r"<movement-title>.*?</movement-title>", "", xml_un, flags=re.DOTALL)
+
+		with open(melody_path, "w", encoding="utf-8") as f:
+			f.write(xml_un)
+
+		return melody_path
+	except Exception as e:
+		print(f"Lỗi khi chuyển đổi: {e}")
+		return {"error": str(e)}
+
+
 def create_waveform(file):
 	y, sr = librosa.load(file, sr=44100)
 
@@ -139,7 +323,7 @@ def create_waveform(file):
 	return img_buffer
 
 
-def isolate_audio(input_file, user_id):
+def isolate_audio(input_file, user_id, melody):
 	output_folder = os.path.join(DATA_LOGS_DIR, user_id, "local_voice/")
 	parent_folder = os.path.dirname(output_folder)  # Sau đó mới tạo thư mục con
 
@@ -152,14 +336,25 @@ def isolate_audio(input_file, user_id):
 
 	cmd = ["umx", "--outdir", output_folder, input_file]
 	filedir = os.path.splitext(os.path.basename(input_file))[0].replace(" ", "_")
-	vocals_path = os.path.join(output_folder, filedir, "vocals.wav")
+
+	unnecessary_files = []
+	if melody:
+		unnecessary_files.extend(["bass.wav", "drums.wav", "vocals.wav"])
+		name = "other.wav"
+	else:
+		unnecessary_files.extend(["bass.wav", "drums.wav", "other.wav"])
+		name = "vocals.wav"
+
+	vocals_path = os.path.join(output_folder, filedir, name)
 	subprocess.run(cmd, check=True)
-	unnecessary_files = ["bass.wav", "drums.wav", "other.wav"]
 
 	for file in unnecessary_files:
 		file_path = os.path.join(output_folder + filedir + '/', file)
 		if os.path.exists(file_path):
 			os.remove(file_path)
+
+	if melody:
+		return vocals_path
 
 	image_path = extract_album_art(input_file, output_folder)
 
@@ -241,8 +436,113 @@ def whole__duration(tempo):
 	return 240 / tempo  # Đơn vị: giây
 
 
-def get_tempo_nhip(file):
-	y, sr = librosa.load(file)
+def round_beat(start_time, tempo):
+	beat = start_time * tempo / 60
+	return round(beat * 2) / 2
+
+
+def convert_duration_to_beat(duration_s, tempo, base=0.125):
+	duration_beat = (duration_s * tempo) / 60
+	return round(duration_beat / base) * base
+
+
+def midi_to_note(midi_number):
+	return librosa.midi_to_note(midi_number)
+
+
+def classify_note_value(duration_beat):
+	note_values = {
+		4.125: "whole",
+		4.0: "whole",
+		3.875: "dotted half",
+		3.75: "dotted half",
+		3.625: "dotted half",
+		3.5: "dotted half",
+		3.375: "dotted half",
+		3.25: "dotted half",
+		3.125: "dotted half",
+		3.0: "dotted half",
+		2.875: "dotted half",
+		2.75: "half",
+		2.625: "half",
+		2.5: "half",
+		2.375: "half",
+		2.25: "half",
+		2.125: "half",
+		2.0: "half",
+		1.875: "half",
+		1.75: "half",
+		1.625: "half",
+		1.5: "dotted quarter",
+		1.375: "dotted quarter",
+		1.25: "tied quarter-sixteenth",
+		1.125: "quarter",
+		1.0: "quarter",
+		0.875: "quarter",
+		0.625: "quarter",
+		0.75: "dotted eighth",
+		0.5: "eighth",
+		0.375: "dotted sixteenth",
+		0.25: "sixteenth",
+		0.1875: "dotted thirty-second",
+		0.125: "thirty-second"
+	}
+
+	for key in sorted(note_values.keys(), reverse=True):
+		if abs(duration_beat - key) < 0.01:  # Kiểm tra xấp xỉ để tránh sai số làm tròn
+			return note_values[key]
+
+	if duration_beat > 4:
+		return "whole"
+	else:
+		return "unknown"
+
+
+def process_notes(note_list, tempo):
+	processed_notes = []
+
+	for note in note_list:
+		start_beat = round_beat(note["start"], tempo)
+		duration_beat = convert_duration_to_beat(note["duration"], tempo)
+		note_value = classify_note_value(duration_beat)
+
+		processed_notes.append({
+			"note": note["note"],
+			"start_beat": start_beat,
+			"duration_beat": duration_beat,
+			"note_value": note_value
+		})
+
+	return processed_notes
+
+
+def process_notes_sum(note_list, tempo):
+	note_dict = defaultdict(float)  # Lưu duration của mỗi (start_beat, note)
+
+	for note in note_list:
+		start_beat = round_beat(note["start"], tempo)
+		duration_beat = convert_duration_to_beat(note["duration"], tempo)
+
+		key = (start_beat, note["note"])
+		note_dict[key] += duration_beat  # Cộng dồn duration nếu cùng start_beat, note
+
+	processed_notes = []
+	for (start_beat, note), duration_beat in note_dict.items():
+		duration_beat = convert_duration_to_beat(duration_beat, tempo)  # Làm tròn lần nữa
+		note_value = classify_note_value(duration_beat)
+
+		processed_notes.append({
+			"note": note,
+			"start_beat": start_beat,
+			"duration_beat": duration_beat,
+			"note_value": note_value
+		})
+
+	return processed_notes
+
+
+def get_tempo_pulse(file, sr=44100):
+	y, sr = librosa.load(file, sr=sr)
 
 	# Phát hiện beat và downbeat
 	tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
@@ -263,6 +563,23 @@ def get_tempo_nhip(file):
 		else:  # Nếu khoảng cách lớn hơn (thường là 4 beats trong 1 chu kỳ)
 			time_signature = "4/4"
 	else:
-		time_signature = "Không xác định"
+		time_signature = "3/4"
 
 	return int(tempo[0]), time_signature
+
+
+# Ánh xạ note_value -> beat duration
+NOTE_DURATIONS = {
+	"whole": 4.0,
+	"half": 2.0,
+	"quarter": 1.0,
+	"eighth": 0.5,
+	"sixteenth": 0.25,
+	"thirty-second": 0.125,
+
+	# Dotted notes
+	"dotted half": 3.0,  # 2 + 1
+	"dotted quarter": 1.5,  # 1 + 0.5
+	"dotted eighth": 0.75,  # 0.5 + 0.25
+	"dotted sixteenth": 0.375,  # 0.25 + 0.125
+}

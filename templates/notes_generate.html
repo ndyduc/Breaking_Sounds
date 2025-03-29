@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-{% include 'header.html' %}
+{% if 'user_id' not in session %}
+{% include 'support/header.html' %}
+{% else %}
+{% include 'support/sidebar.html' %}
+{% endif %}
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
@@ -7,190 +11,54 @@
 	<link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
 	<script src="https://unpkg.com/magic-snowflakes/dist/snowflakes.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
-	<style>
-		* {
-			user-select: none;
-			-webkit-user-select: none;
-			-moz-user-select: none;
-			-ms-user-select: none;
-		}
-		
-		html, body {
-			height: 100%;
-			margin: 0;
-			padding: 0;
-		}
-		
-		html::-webkit-scrollbar, body::-webkit-scrollbar {
-			display: none;
-		}
-		
-		strong {
-			color: rgb(254, 188, 188);
-		}
-		
-		#gene {
-			margin: 0;
-			position: relative;
-			width: 100vw;
-			height: 100vh;
-			background: url("../static/img/understanding_dotted_notes_clearly.jpg.webp") center/cover no-repeat;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-		}
-		
-		#gene_body {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-			gap: 15px;
-			width: 80%;
-			max-width: 500px;
-			padding: 50px 20px;
-			border: 3px dashed white; /* Viền nét đứt */
-			border-radius: 15px;
-			background: rgba(0, 0, 0, 0.3); /* Màu nền mờ */
-			backdrop-filter: blur(5px); /* Hiệu ứng làm mờ */
-			text-align: center;
-		}
-		
-		#file_info {
-			gap: 40px;
-			width: 80%;
-			max-width: 900px;
-			padding: 30px 20px;
-			border-radius: 15px;
-			background: rgba(0, 0, 0, 0.3); /* Màu nền mờ */
-			backdrop-filter: blur(5px); /* Hiệu ứng làm mờ */
-			color: white;
-		}
-		
-		#load {
-			position: absolute;
-			width: 80%;
-			max-width: 900px;
-			height: 360px;
-			padding: 30px 20px;
-			border-radius: 15px;
-			background: rgb(0, 0, 0, 0.65);
-			backdrop-filter: blur(5px);
-			display: none;
-			justify-content: center;
-			align-items: center;
-			z-index: 10;
-		}
-		
-		#cancel, #cancel_message {
-			position: absolute;
-			top: 30px;
-			right: 30px;
-			cursor: pointer;
-			width: 30px;
-			height: 30px;
-		}
-		
-		#audio_player {
-			margin-top: 10px;
-			width: 500px;
-		}
-		
-		#inform {
-			color: white;
-			font-size: 26px;
-			font-family: 'Lobster', cursive;
-		}
-		
-		label {
-			color: white;
-		}
-		
-		#info {
-			max-height: 300px;
-		}
-		
-		.custom-file-upload {
-			display: inline-block;
-			width: 200px;
-			height: 50px;
-			border-radius: 15px;
-			background-color: #7289DA;
-			color: white;
-			font-size: 16px;
-			font-weight: bold;
-			text-align: center;
-			line-height: 50px;
-			cursor: pointer;
-			transition: 0.3s;
-			border: 2px solid transparent;
-		}
-		
-		.custom-file-upload:hover {
-			background-color: #5b6eae;
-		}
-		
-		.custom-file-upload:active {
-			background-color: #4a5c93;
-			border-color: white;
-		}
-		
-		#nut_bam, #download {
-			display: flex;
-			gap: 30px;
-			align-items: center;
-		}
-		
-		#generate_notes, #isolate, #dl_vocal, #save_vocal {
-			position: relative;
-			display: grid;
-			place-items: center;
-			width: 235px;
-			height: 50px;
-			top: 5px;
-			border: 0;
-			border-radius: 15px;
-			color: white;
-			font-family: 'Lobster', cursive;
-			font-size: 24px;
-			text-decoration: none;
-			background-color: rgb(254, 188, 188);
-			cursor: pointer;
-			animation: 0.5s ease-in-out;
-		}
-		
-		#file_name {
-			display: inline-block;
-			max-width: 400px;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			vertical-align: middle;
-		}
-		
-		#dl_vocal:hover, #isolate:hover, #generate_notes:hover, #save_vocal:hover {
-			color: rgb(254, 188, 188);
-			background-color: white;
-			box-shadow: 5px 5px rgba(254, 188, 188, 0.8);
-			transition: all 0.3s ease-in-out;
-		}
-		
-		p {
-			margin-bottom: 0;
-		}
-		
-		#message {
-			display: none;
-			position: absolute;
-			border-radius: 30px;
-			width: 40%;
-			left: 30%;
-			top: 100px;
-			padding: 10px 50px;
-			background-color: white;
-			color: rgb(254, 188, 188);
-		}
-	</style>
+	<link rel="stylesheet" href="/static/css/notes_genarate.css">
+	<link rel="icon" href="/static/logo/music_note_white.png">
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			let defaultIndex = 1; // Mục mặc định
+			let defaultNavButton = document.querySelector(`.nav-button:nth-of-type(${defaultIndex})`);
+			let highlight = document.getElementById("nav-content-highlight");
+			
+			if (defaultNavButton) {
+				let defaultTop = defaultNavButton.offsetTop + "px";
+				highlight.style.top = defaultTop;
+				highlight.dataset.defaultTop = defaultTop; // Lưu vị trí mặc định
+				
+				// Đặt màu cho mục mặc định
+				defaultNavButton.classList.add("active");
+				defaultNavButton.style.color = "var(--navbar-dark-primary)";
+			}
+			
+			document.querySelectorAll(".nav-button").forEach((button) => {
+				button.addEventListener("mouseenter", function () {
+					highlight.style.top = button.offsetTop + "px";
+					resetColors();
+					
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-dark-primary)"; // Mục được hover
+						defaultNavButton.style.color = "var(--navbar-light-secondary)"; // Đổi màu mặc định
+					}
+				});
+				
+				button.addEventListener("mouseleave", function () {
+					resetColors();
+					highlight.style.top = highlight.dataset.defaultTop; // Trả về vị trí mặc định
+					
+					// Nếu rời khỏi mục khác, khôi phục màu mục mặc định
+					defaultNavButton.style.color = "var(--navbar-dark-primary)";
+				});
+			});
+			
+			function resetColors() {
+				document.querySelectorAll(".nav-button").forEach(button => {
+					button.classList.remove("active");
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-light-secondary)"; // Đặt lại màu khi không phải mặc định
+					}
+				});
+			}
+		});
+	</script>
 </head>
 <body>
 <div id="gene">
@@ -203,16 +71,17 @@
 		<label for="file" class="custom-file-upload">Browse file</label>
 	</div>
 	<div id="load">
-		{% include 'rgbload.html' %}
+		{% include 'support/rgbload.html' %}
 	</div>
 	<div id="file_info" style="display: none; ">
 		<img id="file_image" src="" alt="Album Art" width="300px" height="300px" style="border-radius: 10px;">
-		<form action="{{ url_for('sounds.upload_file') }}" method="post" id="info">
-			<img id="cancel" src="../static/logo/X.svg" alt="">
+		<form action="{{ url_for('sounds.result_sheet') }}" method="post" id="info" enctype="multipart/form-data">
+			<img id="cancel" src="../static/logo/X.svg" alt="Waveform">
 			<input type="file" name="file_up" id="file_up" hidden>
+			<input type="text" name="modelname" id="modelname" value="CNN" hidden="">
 			<input type="hidden" id="hidden_file_name" name="hidden_file_name">
 			<p><strong>File Name:</strong> <label id="file_name"></label></p>
-			<div style="display: flex; justify-content: space-between;">
+			<div style="display: flex; justify-content: space-between; margin: 10px 0;">
 				<p><strong>File Type:</strong> <label id="file_type"></label></p>
 				<p><strong>File Size:</strong> <label id="file_size"></label></p>
 				<p><strong>Duration:</strong> <label id="file_duration">Loading...</label></p>
@@ -234,7 +103,8 @@
 	</div>
 	<div id="message">
 		<p id="mess"></p>
-		<img id="cancel_message" src="../static/logo/X_pink.svg" alt="" style="width: 25px;height: 25px; top: 10px; right: 15px">
+		<img id="cancel_message" src="../static/logo/X_pink.svg" alt=""
+		     style="width: 25px;height: 25px; top: 10px; right: 15px">
 	</div>
 </div>
 
@@ -385,7 +255,7 @@
 	});
 	
 	function isValidFileType(file) {
-		const allowedTypes = ["audio/mp3", "audio/wav", "audio/mpeg"];
+		const allowedTypes = ["audio/mp3", "audio/wav", "audio/x-wav", "audio/mpeg"];
 		return allowedTypes.includes(file.type);
 	}
 	
@@ -398,7 +268,10 @@
 		
 		let dataTransfer = new DataTransfer();
 		dataTransfer.items.add(file);
-		document.getElementById("file_up").files = dataTransfer.files;
+		
+		// Gán file vào input ẩn
+		let hiddenFileInput = document.getElementById("file_up");
+		hiddenFileInput.files = dataTransfer.files;
 		
 		// Cập nhật thông tin file
 		updateFileInfo(file);

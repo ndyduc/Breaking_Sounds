@@ -6,6 +6,7 @@ from src.data_connecter import *
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from dotenv import load_dotenv
+
 import os
 
 
@@ -49,7 +50,8 @@ def login():
 def callback():
     try:
         flow.fetch_token(authorization_response=request.url)
-        if not session['state'] == request.args['state']: return 'State mismatch', 400
+        if not session['state'] == request.args['state']:
+            return 'State mismatch', 400
 
         credentials = flow.credentials
         id_info = id_token.verify_oauth2_token(
@@ -59,16 +61,38 @@ def callback():
         )
         # print(id_info)
         # Lưu thông tin người dùng vào session
-        session['id'] = id_info['sub']
+
+        from main import decode_img
+        if 'user_id' in session:
+            if 'picture' in session:
+                user = update_user(session.get('user_id'), id_info.get('sub'))
+            else:
+                user = update_user(session.get('user_id'), id_info.get('sub'), None, None, None, id_info.get('picture'))
+                new_info = get_user(None, session.get('email'))
+                session['picture'] = decode_img(new_info['Avatar_url'])
+        else:
+            session['id'] = id_info['sub']
+            session['email'] = id_info.get('email')
+
+            if check_exist_user(session['email']):
+                user = get_user(None, session['email'])
+                session['user_id'] = str(user['_id'])
+                session['name'] = user['Username']
+
+                avatar_url = user.get('Avatar_url')
+                if isinstance(avatar_url, str) and avatar_url.startswith("http"):
+                    session['picture'] = avatar_url  # Nếu là link, giữ nguyên
+                else:
+                    session['picture'] = decode_img(avatar_url)  # Nếu là binary, decode
+            else:
+                user = insert_user(id_info.get('sub'), session.get('email'), id_info.get('email'), None, id_info.get('picture'))
+                session['user_id'] = user
+                usernew = get_user(None, session['email'])
+                session['name'] = usernew['Username']
+                session['picture'] = usernew['Avatar_url']
+
         session['google_id'] = id_info.get('sub')
-        session['name'] = id_info.get('name')
-        session['email'] = id_info.get('email')
-        session['picture'] = id_info.get('picture')
-
-        user = get_user(id_info.get('sub'))
-        session['user_id'] = str(user['_id'])
-
-        return redirect(url_for('google.profile'))
+        return redirect(url_for('index'))
     except Exception as e:
         print(f"Lỗi khi lấy token: {e}")
         return "Lỗi xác thực OAuth2", 400
@@ -76,14 +100,6 @@ def callback():
 
 @google.route('/profile')
 def profile():
-    if check_exist_user(session['email']):
-        user = get_user(None, session['email'])
-        session['user_id'] = str(user['_id'])
-        # return redirect(url_for('index'))
-    else:
-        user = insert_user(session['google_id'], session['name'], session['email'], None, session['picture'])
-        session['user_id'] = user
-
     if 'google_id' not in session:
         flash("Error when logging in with Google !")
         return redirect(url_for('login_base'))

@@ -1,0 +1,183 @@
+
+* {
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+html, body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+	display: none;
+}
+
+strong {
+	color: rgb(254, 188, 188);
+}
+
+#gene {
+	margin: 0;
+	position: relative;
+	width: 100vw;
+	height: 100vh;
+	background: url("/static/img/understanding_dotted_notes_clearly.jpg.webp") center/cover no-repeat;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+#gene_body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 15px;
+	width: 80%;
+	max-width: 500px;
+	padding: 50px 20px;
+	border: 3px dashed white; /* Viền nét đứt */
+	border-radius: 15px;
+	background: rgba(0, 0, 0, 0.3); /* Màu nền mờ */
+	backdrop-filter: blur(5px); /* Hiệu ứng làm mờ */
+	text-align: center;
+}
+
+#file_info {
+	gap: 40px;
+	width: 80%;
+	max-width: 900px;
+	padding: 30px 20px;
+	border-radius: 15px;
+	background: rgba(0, 0, 0, 0.3); /* Màu nền mờ */
+	backdrop-filter: blur(5px); /* Hiệu ứng làm mờ */
+	color: white;
+}
+
+#load {
+	position: absolute;
+	width: 80%;
+	max-width: 900px;
+	height: 360px;
+	padding: 30px 20px;
+	border-radius: 15px;
+	background: rgb(0, 0, 0, 0.65);
+	backdrop-filter: blur(5px);
+	display: none;
+	justify-content: center;
+	align-items: center;
+	z-index: 10;
+}
+
+#cancel, #cancel_message {
+	position: absolute;
+	top: 30px;
+	right: 30px;
+	cursor: pointer;
+	width: 30px;
+	height: 30px;
+}
+
+#audio_player {
+	margin-top: 10px;
+	width: 500px;
+}
+
+#inform {
+	color: white;
+	font-size: 26px;
+	font-family: 'Lobster', cursive;
+}
+
+label {
+	color: white;
+}
+
+#info {
+	max-height: 300px;
+}
+
+.custom-file-upload {
+	display: inline-block;
+	width: 200px;
+	height: 50px;
+	border-radius: 15px;
+	background-color: #7289DA;
+	color: white;
+	font-size: 16px;
+	font-weight: bold;
+	text-align: center;
+	line-height: 50px;
+	cursor: pointer;
+	transition: 0.3s;
+	border: 2px solid transparent;
+}
+
+.custom-file-upload:hover {
+	background-color: #5b6eae;
+}
+
+.custom-file-upload:active {
+	background-color: #4a5c93;
+	border-color: white;
+}
+
+#nut_bam, #download {
+	display: flex;
+	gap: 30px;
+	align-items: center;
+}
+
+#generate_notes, #isolate, #dl_vocal, #save_vocal {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 235px;
+	height: 50px;
+	top: 5px;
+	border: 0;
+	border-radius: 15px;
+	color: white;
+	font-family: 'Lobster', cursive;
+	font-size: 24px;
+	text-decoration: none;
+	background-color: rgb(254, 188, 188);
+	cursor: pointer;
+	animation: 0.5s ease-in-out;
+}
+
+#file_name {
+	display: inline-block;
+	max-width: 400px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: middle;
+}
+
+#dl_vocal:hover, #isolate:hover, #generate_notes:hover, #save_vocal:hover {
+	color: rgb(254, 188, 188);
+	background-color: white;
+	box-shadow: 5px 5px rgba(254, 188, 188, 0.8);
+	transition: all 0.3s ease-in-out;
+}
+
+p {
+	margin-bottom: 0;
+}
+
+#message {
+	display: none;
+	position: absolute;
+	border-radius: 30px;
+	width: 40%;
+	left: 30%;
+	top: 100px;
+	padding: 10px 50px;
+	background-color: white;
+	color: rgb(254, 188, 188);
+}

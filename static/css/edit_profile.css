@@ -1,0 +1,154 @@
+
+* {
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+::-webkit-scrollbar {
+    display: none !important;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: auto;
+}
+
+
+
+html, body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100vh;
+}
+
+#edit_profile {
+	width: 100%;
+	height: 100vh;
+	background-color: rgba(0, 0, 0, 0.5);
+	position: relative;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 5;
+}
+
+.edit_content {
+	position: relative;
+	display: block;
+}
+
+#avatar {
+	position: absolute;
+	top: -75px;
+	left: 115px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+#user_avatar {
+	width: 150px;
+	height: 150px;
+	border-radius: 50%;
+}
+
+#main_edit {
+	position: relative;
+	width: 380px;
+	height: auto;
+	padding: 100px 20px 30px 20px;
+	border-radius: 30px;
+	background-color: #303030;
+}
+
+.info_user {
+	position: relative;
+	display: flex;
+	width: 100%;
+	padding: 8px 10px;
+	margin-top: 20px;
+	border-radius: 15px;
+	gap: 20px;
+}
+
+.can-change {
+	font-size: 22px;
+	font-family: 'cursive';
+	font-weight: 600;
+	color: rgb(254, 188, 188);
+	width: 280px;
+	height: auto;
+	text-align: center;
+	background-color: white;
+	border-radius: 15px;
+}
+
+.icon_back {
+	background-color: rgba(255, 255, 255, 0.35);
+	border-radius: 100%;
+	padding: 5px;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	position: absolute;
+	right: 15px;
+	top: 115px;
+	
+}
+
+.penedit {
+	color: rgb(254, 188, 188);
+	width: 15px;
+	height: 25px;
+}
+
+#done-edit {
+	position: relative;
+	width: 50%;
+	padding: 5px 10px;
+	color: white;
+	background-color: rgb(254, 188, 188);
+	border-radius: 15px;
+	font-size: 18px;
+	border: 0;
+	left: 85px;
+	margin: 30px 0 0 0;
+	transition: 0.5s;
+}
+
+#done-edit:hover {
+	color: rgb(254, 188, 188);
+	background-color: white;
+	box-shadow: 0 0 15px 5px rgb(254, 188, 188);
+}
+
+.penedit:hover {
+	color: white;
+}
+
+.changebtn {
+	width: 47%;
+	padding: 2px 5px;
+	font-weight: 600;
+	text-align: center;
+	color: rgb(254, 188, 188);
+	background-color: white;
+	font-size: 18px;
+	border-radius: 10px;
+	transition: 0.5s;
+	cursor: pointer;
+}
+
+.changebtn:hover {
+	background-color: rgb(254, 188, 188);
+	color: white;
+	box-shadow: 0 0 5px 5px white;
+}
