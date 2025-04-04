@@ -90,6 +90,9 @@ def callback():
                 usernew = get_user(None, session['email'])
                 session['name'] = usernew['Username']
                 session['picture'] = usernew['Avatar_url']
+                flash("Wellcome to Breaking Sounds !")
+
+                return redirect(url_for('index'))
 
         session['google_id'] = id_info.get('sub')
         return redirect(url_for('index'))
@@ -102,7 +105,7 @@ def callback():
 def profile():
     if 'google_id' not in session:
         flash("Error when logging in with Google !")
-        return redirect(url_for('login_base'))
+        return redirect(url_for('loginbase'))
 
     return f'''
         <h1>Profile</h1>

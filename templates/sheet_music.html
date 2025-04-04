@@ -8,12 +8,17 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" href="/static/logo/music_note_white.png">
 	<title>MusicXML Sheet</title>
 	<script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.9.0/build/opensheetmusicdisplay.min.js"></script>
 	<style>
 		#sheet_main{
 			width: 100%;
 			padding: 0 0 0 0;
+		}
+		
+		#osmd-container{
+			margin-right: 200px;
 		}
 	</style>
 </head>
@@ -29,8 +34,6 @@
 		const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-container", {
 			autoResize: true
 		});
-		
-		// Lấy đường dẫn file từ input hidden
 		const musicXMLPath = document.getElementById("musicxml-path").value;
 		
 		if (musicXMLPath) {

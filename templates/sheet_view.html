@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+{% if 'user_id' not in session %}
+{% include 'support/header.html' %}
+{% else %}
+{% include 'support/sidebar.html' %}
+{% endif %}
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="/static/css/notes_genarate.css">
+	<link rel="icon" href="/static/logo/music_note_white.png">
+	<title>Sheet Viewer</title>
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			let defaultIndex = 3; // Mục mặc định
+			let defaultNavButton = document.querySelector(`.nav-button:nth-of-type(${defaultIndex})`);
+			let highlight = document.getElementById("nav-content-highlight");
+			
+			if (defaultNavButton) {
+				let defaultTop = defaultNavButton.offsetTop + "px";
+				highlight.style.top = defaultTop;
+				highlight.dataset.defaultTop = defaultTop; // Lưu vị trí mặc định
+				
+				// Đặt màu cho mục mặc định
+				defaultNavButton.classList.add("active");
+				defaultNavButton.style.color = "var(--navbar-dark-primary)";
+			}
+			
+			document.querySelectorAll(".nav-button").forEach((button) => {
+				button.addEventListener("mouseenter", function () {
+					highlight.style.top = button.offsetTop + "px";
+					resetColors();
+					
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-dark-primary)"; // Mục được hover
+						defaultNavButton.style.color = "var(--navbar-light-secondary)"; // Đổi màu mặc định
+					}
+				});
+				
+				button.addEventListener("mouseleave", function () {
+					resetColors();
+					highlight.style.top = highlight.dataset.defaultTop; // Trả về vị trí mặc định
+					
+					// Nếu rời khỏi mục khác, khôi phục màu mục mặc định
+					defaultNavButton.style.color = "var(--navbar-dark-primary)";
+				});
+			});
+			
+			function resetColors() {
+				document.querySelectorAll(".nav-button").forEach(button => {
+					button.classList.remove("active");
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-light-secondary)"; // Đặt lại màu khi không phải mặc định
+					}
+				});
+			}
+		});
+	</script>
+</head>
+<body>
+<div id="gene" style="
+	background: url('/static/img/Dotted_Note_Score-PIC_3576095_1920.jpg') center/cover no-repeat !important;">
+	<form action="{{ url_for('non.viewsheet') }}" method="post" id="gene_body" enctype="multipart/form-data">
+		<img src="../static/logo/upload.svg" alt="">
+		<div id="inform">Drag or Drop file in here</div>
+		<label>(required musicxml only)</label>
+		<label>Or</label>
+		<input type="file" name="file" id="file" hidden accept=".musicxml">
+		<label for="file" class="custom-file-upload">Browse file</label>
+	</form>
+	<div id="file_info"
+	     style="display: none; width:30%; margin-top: 10px;color: white; font-size: 18px; font-weight: bold;">
+		<img id="cancel" src="../static/logo/X.svg" alt="Waveform">
+		<p><strong>File Name:</strong> <span id="file-name"></span></p>
+		<div style="display: flex; justify-content: space-between; margin: 10px 0;">
+			<p><strong>File Type:</strong> <span id="file-type"></span></p>
+			<p><strong>File Size:</strong> <span id="file-size"></span></p>
+		</div>
+		<button type="submit" id="view">View file</button>
+	</div>
+	
+	<script>
+		document.getElementById("cancel").addEventListener("click", function () {
+			document.getElementById("gene_body").style.display = "flex";
+			document.getElementById("file_info").style.display = "none";
+		});
+		
+		document.getElementById("view").addEventListener("click", function (e) {
+			e.preventDefault();
+			document.getElementById("gene_body").submit();
+		});
+		
+		document.addEventListener("DOMContentLoaded", function () {
+			let dropArea = document.getElementById("gene_body");
+			let fileInput = document.getElementById("file");
+			let fileInfo = document.getElementById("file_info");
+			let fileNameSpan = document.getElementById("file-name");
+			let fileSizeSpan = document.getElementById("file-size");
+			let fileTypeSpan = document.getElementById("file-type");
+			
+			["dragenter", "dragover", "dragleave", "drop"].forEach(event => {
+				dropArea.addEventListener(event, e => e.preventDefault());
+			});
+			
+			dropArea.addEventListener("dragenter", () => dropArea.classList.add("highlight"));
+			dropArea.addEventListener("dragleave", () => dropArea.classList.remove("highlight"));
+			
+			dropArea.addEventListener("drop", function (e) {
+				dropArea.classList.remove("highlight");
+				if (e.dataTransfer.files.length > 0) {
+					processFile(e.dataTransfer.files[0]);
+				}
+			});
+			
+			fileInput.addEventListener("change", function () {
+				if (this.files.length > 0) {
+					processFile(this.files[0]);
+				}
+			});
+			
+			function processFile(file) {
+				if (file.name.endsWith(".musicxml")) {
+					document.getElementById('gene_body').style.display = 'none';
+					fileInfo.style.display = "block";
+					fileNameSpan.textContent = file.name;
+					fileSizeSpan.textContent = (file.size / 1024).toFixed(2) + " KB";
+					fileTypeSpan.textContent = file.type || "application/musicxml";
+				} else {
+					alert("Invalid file type! Please upload a .musicxml file.");
+				}
+			}
+		});
+	</script>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+{% if 'user_id' not in session %}
+{% include 'support/header.html' %}
+{% else %}
+{% include 'support/sidebar.html' %}
+{% endif %}
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="Content-Security-Policy" content="font-src 'self' data:;">
+	<title>Sheet Music Editor</title>
+	<style>
+		html::-webkit-scrollbar, body::-webkit-scrollbar {
+			display: none;
+		}
+		
+		
+		a {
+			color: #fff;
+			text-decoration: none;
+		}
+		
+		body {
+			margin: 0;
+			padding: 0;
+			height: 100vh;
+			color: white;
+		}
+	</style>
+	<script src="https://www.noteflight.com/clientapi/2.0.0/nfclient.js"></script>
+</head>
+<body style="background-color: white">
+<div id="score1"></div>
+
+<script>
+	let options = {
+		host: 'www.noteflight.com',
+		width: '95%',  // Điều chỉnh để chiều rộng là 100% của màn hình
+		height: 850,
+		hidePlaybackControls: true,
+		viewParams: {
+			scale: 1.5,
+			role: 'template',
+			app: 'html5',
+			displayMode: 'flow'
+		}
+	}
+	
+	let scoreView = new NFClient.ScoreView('score1', 'fcfd6d0bc0770f67cdbe1b8129456521fec090a0', options);
+	scoreView.addEventListener('editorReady', function () {
+		fetch('/get_musicxml')
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('File not found');
+				}
+				return response.text(); // Sử dụng `response.text()` để lấy dữ liệu
+			})
+			.then(data => {
+				console.log('MusicXML data:', data);
+				scoreView.loadMusicXML(data); // Gọi hàm loadMusicXML khi dữ liệu đã có
+			})
+			.catch(error => {
+				console.error('Error:', error);
+			});
+	});
+
+
+</script>
+</body>
+</html>

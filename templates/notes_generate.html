@@ -151,13 +151,17 @@
 						})
 						.catch(error => console.error("Error:", error));
 				} else {
-					window.location.href = "{{ url_for('login_base') }}";
+					window.location.href = "{{ url_for('loginbase') }}";
 				}
 			})
 			.catch(error => console.error("Error:", error));
 	});
 </script>
 <script>
+	document.getElementById("generate_notes").addEventListener("click", function (){
+		document.getElementById("load").style.display = "flex";
+	})
+	
 	document.getElementById("isolate").addEventListener("click", function () {
 		document.getElementById("nut_bam").style.display = "none";
 		document.getElementById('load').style.display = 'flex';

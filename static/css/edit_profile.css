@@ -62,9 +62,13 @@ html, body {
 	position: relative;
 	width: 380px;
 	height: auto;
-	padding: 100px 20px 30px 20px;
+	padding: 100px 20px 30px 20px ;
 	border-radius: 30px;
 	background-color: #303030;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 }
 
 .info_user {
@@ -75,6 +79,7 @@ html, body {
 	margin-top: 20px;
 	border-radius: 15px;
 	gap: 20px;
+	box-sizing: border-box;
 }
 
 .can-change {
@@ -119,7 +124,6 @@ html, body {
 	border-radius: 15px;
 	font-size: 18px;
 	border: 0;
-	left: 85px;
 	margin: 30px 0 0 0;
 	transition: 0.5s;
 }
@@ -135,9 +139,11 @@ html, body {
 }
 
 .changebtn {
-	width: 47%;
+	width: 150px;
+	height: 34px;
 	padding: 2px 5px;
-	font-weight: 600;
+	font-weight: 400;
+	font-family: "Cormorant Garamond", Georgia, serif;
 	text-align: center;
 	color: rgb(254, 188, 188);
 	background-color: white;
@@ -145,6 +151,10 @@ html, body {
 	border-radius: 10px;
 	transition: 0.5s;
 	cursor: pointer;
+	box-sizing: border-box;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .changebtn:hover {
