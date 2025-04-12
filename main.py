@@ -224,20 +224,7 @@ def change_info():
 
 		if profile_img:
 			try:
-				file_size = len(profile_img.read())
-				profile_img.seek(0)
-
-				img = Image.open(io.BytesIO(profile_img.read()))
-				if img.mode == "RGBA":
-					img = img.convert("RGB")
-				img_bytes = io.BytesIO()
-
-				if file_size > 5 * 1024 * 1024:  # 5MB
-					img.save(img_bytes, format="JPEG", quality=50)
-				else:
-					img.save(img_bytes, format="JPEG")
-
-				img_binary = img_bytes.getvalue()
+				img_binary = img_to_binary(profile_img)
 			except Exception as e:
 				return jsonify({"success": False, "message": f"Image processing error: {str(e)}"})
 		else:

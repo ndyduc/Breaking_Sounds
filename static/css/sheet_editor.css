@@ -1,0 +1,136 @@
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+	display: none;
+}
+
+a {
+	color: #fff;
+	text-decoration: none;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	height: 100vh;
+	color: white;
+}
+
+.bga {
+	background-color: black;
+	position: absolute;
+}
+
+.security1 {
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 185px;
+	z-index: 0;
+}
+
+.security2 {
+	top: 0;
+	left: 0;
+	width: 740px;
+	height: 100vh;
+	border-radius: 0 100px 500px 0;
+	z-index: 1;
+	background-image: url("/static/img/la-la-land-behind-the-scenes-footage-of-ryan-gosling-social.jpg");
+}
+
+.security3 {
+	top: 185px;
+	left: 870px;
+	width: 600px;
+	height: 80vh;
+}
+
+.security4 {
+	top: 230px;
+	left: 0;
+	width: 100%;
+	height: 75vh;
+	z-index: 0;
+}
+
+.security2.bga {
+	display: block;
+	gap: 10px; /* Khoảng cách giữa các phần */
+	height: 100%; /* Hoặc chiều cao mong muốn */
+	padding: 50px;
+	box-sizing: border-box;
+}
+
+.part {
+	color: white;
+	margin-bottom: 10px;;
+}
+
+.part > ol > li {
+	margin-bottom: 10px;
+}
+
+#export-out {
+	position: fixed;
+	left: 0;
+	top: 150px;
+	width: auto;
+	height: auto;
+	z-index: 6;
+	background-color: var(--navbar-dark-primary);
+	border-radius: 0 30px 30px 0;
+	color: var(--navbar-light-secondary);
+	display: none;
+	padding: 0 5px 10px 0;
+}
+
+.asd {
+	display: block;
+	
+}
+
+.content i {
+	position: relative;
+	top: 8px;
+}
+
+.clo {
+	width: 25px;
+	height: 190px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.clo i {
+	transition: transform 0.3s ease;
+	transform-origin: center center;
+}
+
+.na {
+	width: 100%;
+	text-align: center;
+	font-size: 22px;
+	color: white;
+	margin: 15px 0;
+}
+
+.bun {
+	display: flex;
+	justify-content: space-between;
+	width: 120px;
+	height: auto;
+	padding: 20px;
+	transition: 0.25s ease;
+	border-radius: 15px;
+	margin-left: 10px;
+}
+
+.bun:hover {
+	background-color: var(--background);
+	color: var(--navbar-dark-primary);
+}
+
+.rotated {
+	transform: rotate(180deg);
+	transition: transform 0.3s ease;
+}

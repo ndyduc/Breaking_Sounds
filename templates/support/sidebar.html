@@ -18,9 +18,7 @@
 				<img style="color: white; width: 25px; height: auto;"
 				     src="/static/logo/music_note_white.png" alt="">
 			</label>
-			<a style="padding-left: 10px; font-size: 20px; font-family: 'Satisfy', cursive; font-weight: 300;" href="/">
-				Breaking Sounds
-			</a>
+			<a style="padding-left: 10px; font-size: 20px; font-family: 'Satisfy', cursive; font-weight: 300;" href="/"> Breaking Sounds </a>
 		</div>
 		<label for="nav-toggle"><span id="nav-toggle-burger" style="rotate: 180deg"></span></label>
 		<hr/>
@@ -31,9 +29,9 @@
 		<div class="nav-button"><i class="fas fa-eye"></i><span>Sheet Viewer</span></div>
 		<hr/>
 		<div class="nav-button"><i class="fas fa-archway"></i><span>Libary</span></div>
+		<div class="nav-button"><i class="fas fa-newspaper"></i><span>Sheet Editor</span></div>
 		<div class="nav-button"><i class="fas fa-thumbtack"></i><span>Pinned Items</span></div>
 		<div class="nav-button"><i class="fas fa-guitar"></i><span>Practice</span></div>
-		<div class="nav-button"><i class="fas fa-newspaper"></i><span>Sheet Editor</span></div>
 		<hr/>
 		<div id="nav-content-highlight"></div>
 	</div>
@@ -66,23 +64,33 @@
 			"/generate",
 			"/pitch_detector",
 			"/sheet_view",
-			"/library",
+			"/libary",
 			"/sheet_editor",
 			"/practice",
 			"/spark"
 		];
 		
-		// Gán thuộc tính `data-link` cho từng button
 		button.setAttribute("data-link", paths[index]);
 		
-		// Thêm sự kiện click để chuyển trang
 		button.addEventListener("click", function () {
 			window.location.href = this.getAttribute("data-link");
 		});
-		
-		// Hiển thị link khi hover vào
-		button.addEventListener("mouseenter", function () {
-			console.log("Hover vào: " + this.getAttribute("data-link"));
+	});
+	
+	document.addEventListener("DOMContentLoaded", () => {
+		const navToggle = document.getElementById("nav-toggle");
+
+		// Khôi phục trạng thái từ localStorage
+		const savedState = localStorage.getItem("sidebarOpen");
+		if (savedState === "1") {
+			navToggle.checked = true;
+		} else {
+			navToggle.checked = false;
+		}
+
+		// Lưu lại trạng thái mỗi khi người dùng thay đổi
+		navToggle.addEventListener("change", () => {
+			localStorage.setItem("sidebarOpen", navToggle.checked ? "1" : "0");
 		});
 	});
 </script>

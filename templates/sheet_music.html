@@ -12,13 +12,39 @@
 	<title>MusicXML Sheet</title>
 	<script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.9.0/build/opensheetmusicdisplay.min.js"></script>
 	<style>
-		#sheet_main{
+		#sheet_main {
 			width: 100%;
 			padding: 0 0 0 0;
 		}
 		
-		#osmd-container{
-			margin-right: 200px;
+		#osmd-container {
+			margin-right: 100px;
+		}
+		
+		#editsheet {
+			padding: 5px 10px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			width: 200px;
+			height: 40px;
+			border-radius: 15px;
+			border: 0;
+			background-color: #18283b;
+			color: white;
+			font-size: 22px;
+			font-family: serif;
+			position: absolute;
+			left: 100px;
+			top: 50px;
+			margin-bottom: 30px;
+			transition: 0.5s ease;
+		}
+		
+		#editsheet:hover {
+			background-color: white;
+			color: #18283b;
+			box-shadow: 0 0 5px 5px #18283b;
 		}
 	</style>
 </head>
@@ -26,10 +52,41 @@
 <div id="sheet_main">
 	<div id="osmd-container"></div>
 </div>
+<button type="button" id="editsheet">Edit Sheet</button>
 
 <input type="hidden" id="musicxml-path" value="{{ result_path }}">
 
 <script>
+	let edits = document.getElementById("editsheet");
+	let user = {{ session.get('user_id') is not none | lower }} ;
+	if (!user) {
+		edits.style.display = 'none';
+	} else {
+		edits.addEventListener('click', function () {
+			const musicxmlPath = document.getElementById("musicxml-path").value;
+			
+			fetch('/edit_upload_sheet', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'  // Đảm bảo gửi JSON
+				},
+				body: JSON.stringify({musicxmlPath: musicxmlPath})
+			})
+				.then(response => response.json())  // Nhận phản hồi dạng JSON
+				.then(data => {
+					if (data.success) {
+						window.location.href = data.redirect_url;  // Chuyển hướng nếu thành công
+					} else {
+						console.error('Error:', data.message);  // Log lỗi nếu có
+					}
+				})
+				.catch(error => {
+					console.error('Error during fetch:', error);
+				});
+		});
+	}
+	
+	
 	document.addEventListener("DOMContentLoaded", async () => {
 		const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-container", {
 			autoResize: true

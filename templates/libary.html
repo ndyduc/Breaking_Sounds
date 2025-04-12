@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+{% if 'user_id' not in session %}
+{% include 'support/header.html' %}
+{% else %}
+{% include 'support/sidebar.html' %}
+{% endif %}
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Libary</title>
+	<link rel="icon" href="/static/logo/music_note_white.png">
+	<link rel="stylesheet" href="/static/css/libary.css">
+	<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+<div class="app">
+	<header class="app-header">
+		<div class="app-header-logo"></div>
+		<div class="app-header-navigation" style="width: 300px;">
+			<div class="tabs">
+				<span class="active" data-type="all">All</span>
+				<span data-type="vocal">Vocals</span>
+				<span data-type="sheet">Sheet music</span>
+			</div>
+		</div>
+		<div class="app-header-actions">
+			<div class="app-header-actions-buttons">
+				<button class="icon-button large btn_active">
+					<i class="fas fa-grip"></i>
+				</button>
+				<button class="icon-button large">
+					<i class="fas fa-list"></i>
+				</button>
+			</div>
+		</div>
+		<div class="app-header-mobile">
+			<button class="icon-button large">
+				<i class="ph-list"></i>
+			</button>
+		</div>
+	
+	</header>
+	<div class="app-body">
+		<div class="app-body-main-content" style="padding-left: 50px;">
+			<section class="service-section">
+				<h2>Breaking Sounds Libary</h2>
+				<div class="service-section-header">
+					<div class="search-field">
+						<input type="text" placeholder="Searching key ..." style="color: rgb(255,188,1880);">
+					</div>
+					<button class="flat-button">
+						Search
+						<i class="fas fa-magnifying-glass" style="position: relative; top: 5px"></i>
+					</button>
+				</div>
+				<div class="mobile-only">
+					<button class="flat-button">
+						Toggle search
+					</button>
+				</div>
+				<div class="tiles"></div>
+			</section>
+		</div>
+	</div>
+</div>
+<script>
+	let dataCache = [];
+	document.addEventListener("DOMContentLoaded", function () {
+		let type = "all";
+		let amount = 25;
+		const formData = new FormData();
+		formData.append("type", type);
+		formData.append("amount", amount);
+		
+		fetch("/get_libary", {
+			method: "POST",
+			body: formData
+		})
+			.then(response => response.json())
+			.then(data => {
+				dataCache = data;
+				handleLibraryData(data);
+			})
+			.catch(error => {
+				console.error("Lỗi khi fetch /get_libary:", error);
+			});
+	});
+	
+	function handleLibraryData(data) {
+		const container = document.querySelector(".tiles, .transfers");
+		container.innerHTML = "";
+		
+		data.forEach((item) => {
+			if (currentMode === "tiles") {
+				if (item.type === "musicxml") {
+					container.appendChild(createMusicXMLTile(item, item.type));
+				} else if (item.type === "vocal") {
+					container.appendChild(createVocalTile(item, item.type));
+				}
+			} else if (currentMode === "transfers") {
+				if (item.type === "musicxml") {
+					container.appendChild(createMusicXMLTransfer(item, item.type));
+				} else if (item.type === "vocal") {
+					container.appendChild(createVocalTransfer(item, item.type));
+				}
+			}
+		});
+	}
+	
+	function createMusicXMLTile(item, type) {
+		const article = document.createElement("article");
+		article.className = "tile";
+		const hiddenInput = `<input type="hidden" class="item-id" value="${item._id}">`;
+		const isPublic = item.IsPublic === true; // hoặc item.ispublic tùy bạn dùng field nào
+		
+		const lockIconClass = isPublic
+			? "fa-lock-open fa-beat"
+			: "fa-lock fa-shake";
+		
+		
+		article.innerHTML = `
+		${hiddenInput}
+		<div class="tile-header">
+			<h3>
+				<span style="overflow-wrap: break-word;">${item.Name || "Unknown"}</span>
+			</h3>
+		</div>
+		<div class="innoo">
+			<span class="view">
+				<i class="fa-solid fa-eye"></i>
+				${item.Views || 0}
+			</span>
+			<span class="instrument">${item.Instrument || "Undentify"}</span>
+			<span class="time">${item.Time || "Không rõ"}</span>
+		</div>
+		<div class="abtn">
+			<span class="icon-button btn-lock">
+				<i class="fa-solid ${lockIconClass}"></i>
+			</span>
+			<span class="icon-button btn-edit">
+				<i class="fa-solid fa-pencil"></i>
+			</span>
+			<span class="icon-button btn-share">
+				<i class="fa-solid fa-share"></i>
+			</span>
+			<span class="icon-button btn-delete">
+				<i class="fa-solid fa-trash-can"></i>
+			</span>
+		</div>
+		`;
+		
+		// Gắn sự kiện cho các nút sau khi đã innerHTML xong
+		setTimeout(() => {
+			const id = article.querySelector(".item-id").value;
+			
+			article.querySelector(".btn-lock").addEventListener("click", () => {
+				const icon = article.querySelector(".btn-lock i");
+				const isLocked = icon.classList.contains("fa-lock");
+				
+				// Chuyển trạng thái trước (optimistic update)
+				if (isLocked) {
+					icon.classList.remove("fa-lock", "fa-shake");
+					icon.classList.add("fa-lock-open", "fa-beat");
+				} else {
+					icon.classList.remove("fa-lock-open", "fa-beat");
+					icon.classList.add("fa-lock", "fa-shake");
+				}
+				
+				const newStatus = isLocked ? "unlock" : "lock";
+				
+				fetch("/unlock_file", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						_id: id,
+						status: newStatus,
+						type: type
+					})
+				})
+					.then(res => res.json())
+					.then(data => {
+						if (!data.success) {
+							alert((isLocked ? "Không thể mở khóa: " : "Không thể khóa: ") + (data.message || "Lỗi không xác định"));
+							
+							// Trả lại icon về trạng thái ban đầu nếu fail
+							if (isLocked) {
+								icon.classList.remove("fa-lock-open", "fa-beat");
+								icon.classList.add("fa-lock", "fa-shake");
+							} else {
+								icon.classList.remove("fa-lock", "fa-shake");
+								icon.classList.add("fa-lock-open", "fa-beat");
+							}
+						} else {
+							const itemInCache = dataCache.find(i => i._id === id);
+							if (itemInCache) {
+								itemInCache.IsPublic = status === "unlock";
+							}
+						}
+					})
+					.catch(error => {
+						console.error("Lỗi kết nối:", error);
+						alert("Disconnect to server, please try again later !");
+						
+						// Trả lại icon về trạng thái ban đầu
+						if (isLocked) {
+							icon.classList.remove("fa-lock-open", "fa-beat");
+							icon.classList.add("fa-lock", "fa-shake");
+						} else {
+							icon.classList.remove("fa-lock", "fa-shake");
+							icon.classList.add("fa-lock-open", "fa-beat");
+						}
+					});
+			});
+			article.querySelector(".btn-edit").addEventListener("click", () => {
+				console.log("Edit clicked:", id);
+				// xử lý edit ở đây
+			});
+			article.querySelector(".btn-share").addEventListener("click", () => {
+				console.log("Share clicked:", id);
+				// xử lý share ở đây
+			});
+			article.querySelector(".btn-delete").addEventListener("click", () => {
+				console.log("Delete clicked:", id);
+				// xử lý delete ở đây
+			});
+		}, 0);
+		
+		return article;
+	}
+	
+	function createVocalTile(item, type) {
+		const article = document.createElement("article");
+		article.className = "tile";
+		const hiddenInput = `<input type="hidden" class="item-id" value="${item._id}">`;
+		const isPublic = item.IsPublic === true; // hoặc item.ispublic tùy bạn dùng field nào
+		
+		const lockIconClass = isPublic
+			? "fa-lock-open fa-beat"
+			: "fa-lock fa-shake";
+		
+		if (item.img_base64) {
+			const base64Url = `data:image/png;base64,${item.img_base64}`;
+			article.style.background = `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${base64Url}) center / cover no-repeat`;
+		} else {
+			// Ảnh mặc định nếu không có ảnh
+			article.style.background = `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url("/static/img/Dotted_Note_Score-PIC_3576095_1920.jpg") center / cover no-repeat`;
+		}
+		
+		article.innerHTML = `
+		${hiddenInput}
+		<div class="tile-header">
+			<h3>
+				<span style="overflow-wrap: break-word;">${item.filename || "Unknown"}</span>
+			</h3>
+		</div>
+		<div class="innoo">
+			<span class="view" id="view2">
+				<i class="fa-solid fa-eye"></i>
+				${item.view || 0}
+			</span>
+			<span class="time" id="time2">${item.Time || "Undentify"}</span>
+		</div>
+		<div class="abtn">
+			<span class="icon-button btn-lock">
+				<i class="fa-solid ${lockIconClass}"></i>
+			</span>
+			<span class="icon-button btn-share">
+				<i class="fa-solid fa-share"></i>
+			</span>
+			<span class="icon-button btn-delete">
+				<i class="fa-solid fa-trash-can"></i>
+			</span>
+		</div>
+		`;
+		setTimeout(() => {
+			const id = article.querySelector(".item-id").value;
+			
+			article.querySelector(".btn-lock").addEventListener("click", () => {
+				const icon = article.querySelector(".btn-lock i");
+				const isLocked = icon.classList.contains("fa-lock");
+				
+				// Chuyển trạng thái trước (optimistic update)
+				if (isLocked) {
+					icon.classList.remove("fa-lock", "fa-shake");
+					icon.classList.add("fa-lock-open", "fa-beat");
+				} else {
+					icon.classList.remove("fa-lock-open", "fa-beat");
+					icon.classList.add("fa-lock", "fa-shake");
+				}
+				
+				const newStatus = isLocked ? "unlock" : "lock";
+				
+				fetch("/unlock_file", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						_id: id,
+						status: newStatus,
+						type: type
+					})
+				})
+					.then(res => res.json())
+					.then(data => {
+						if (!data.success) {
+							alert((isLocked ? "Không thể mở khóa: " : "Không thể khóa: ") + (data.message || "Lỗi không xác định"));
+							
+							// Trả lại icon về trạng thái ban đầu nếu fail
+							if (isLocked) {
+								icon.classList.remove("fa-lock-open", "fa-beat");
+								icon.classList.add("fa-lock", "fa-shake");
+							} else {
+								icon.classList.remove("fa-lock", "fa-shake");
+								icon.classList.add("fa-lock-open", "fa-beat");
+							}
+						} else {
+							const itemInCache = dataCache.find(i => i._id === id);
+							if (itemInCache) {
+								itemInCache.IsPublic = newStatus === "unlock";
+							}
+						}
+					})
+					.catch(error => {
+						console.error("Lỗi kết nối:", error);
+						alert("Disconnect to server, please try again later !");
+						
+						// Trả lại icon về trạng thái ban đầu
+						if (isLocked) {
+							icon.classList.remove("fa-lock-open", "fa-beat");
+							icon.classList.add("fa-lock", "fa-shake");
+						} else {
+							icon.classList.remove("fa-lock", "fa-shake");
+							icon.classList.add("fa-lock-open", "fa-beat");
+						}
+					});
+			});
+			article.querySelector(".btn-edit").addEventListener("click", () => {
+				console.log("Edit clicked:", id);
+				// xử lý edit ở đây
+			});
+			article.querySelector(".btn-share").addEventListener("click", () => {
+				console.log("Share clicked:", id);
+				// xử lý share ở đây
+			});
+			article.querySelector(".btn-delete").addEventListener("click", () => {
+				console.log("Delete clicked:", id);
+				// xử lý delete ở đây
+			});
+		}, 0);
+		return article;
+	}
+	
+	const buttons = document.querySelectorAll(".app-header-actions-buttons .icon-button");
+	const container = document.querySelector(".tiles");
+	
+	let currentMode = "tiles"; // Hoặc "transfers"
+	
+	buttons.forEach((btn, index) => {
+		btn.addEventListener("click", function () {
+			buttons.forEach((b) => b.classList.remove("btn_active"));
+			this.classList.add("btn_active");
+			
+			// Đổi class
+			if (index === 0) {
+				container.className = "tiles";
+				currentMode = "tiles";
+			} else {
+				container.className = "transfers";
+				currentMode = "transfers";
+			}
+			
+			// Load lại dữ liệu với kiểu hiển thị mới
+			handleLibraryData(dataCache); // dataCache là biến chứa dữ liệu đã lấy từ server
+		});
+	});
+	
+	function createMusicXMLTransfer(item, type) {
+		const div = document.createElement("div");
+		div.className = "transfer";
+		const isPublic = item.IsPublic === true; // hoặc item.ispublic tùy bạn dùng field nào
+		
+		const lockIconClass = isPublic
+			? "fa-lock-open fa-beat"
+			: "fa-lock fa-shake";
+		
+		div.innerHTML = `
+
+		<input type="hidden" class="music-id" value="${item._id}" />
+		<div class="transfer-logo">
+			<img src="/static/img/Dotted_Note_Score-PIC_3576095_1920.jpg"/>
+		</div>
+		<span style="overflow: hidden; color: white; width: 340px">${item.Name || "Unknown"}</span>
+		<dl class="transfer-details">
+			<div>
+				<dt><i class="fa-solid fa-guitar"></i></dt>
+				<span id="ument">${item.Instrument || "Violin"}</span>
+			</div>
+			<div>
+				<dt><i class="fa-solid fa-eye"></i></dt>
+				<span id="uview">${item.Views || 0}</span>
+			</div>
+			<div>
+				<span id="utime">${item.Time || "Không rõ"}</span>
+			</div>
+		</dl>
+		<div class="buu">
+			<span class="icon-button"><i class="fa-solid ${lockIconClass}"></i></span>
+			<span class="icon-button"><i class="fa-solid fa-pencil"></i></span>
+			<span class="icon-button"><i class="fa-solid fa-share"></i></span>
+			<span class="icon-button"><i class="fa-solid fa-trash-can"></i></span>
+		</div>
+		`;
+		
+		setTimeout(() => {
+			const id = div.querySelector(".music-id")?.value;
+			const lockBtn1 = div.querySelector(".buu .icon-button:nth-child(1)");
+			const lockBtn2 = div.querySelector(".buu .icon-button:nth-child(2)");
+			const lockBtn3 = div.querySelector(".buu .icon-button:nth-child(3)");
+			const lockBtn4 = div.querySelector(".buu .icon-button:nth-child(4)");
+			if (!lockBtn1 || !id) return;
+			
+			lockBtn1.addEventListener("click", () => {
+				const icon = lockBtn1.querySelector("i");
+				const isLocked = icon.classList.contains("fa-lock");
+				
+				const status = isLocked ? "unlock" : "lock";
+				
+				icon.classList.remove(
+					isLocked ? "fa-lock" : "fa-lock-open",
+					isLocked ? "fa-shake" : "fa-beat"
+				);
+				icon.classList.add(
+					isLocked ? "fa-lock-open" : "fa-lock",
+					isLocked ? "fa-beat" : "fa-shake"
+				);
+				
+				fetch("/unlock_file", {
+					method: "POST",
+					headers: {"Content-Type": "application/json"},
+					body: JSON.stringify({
+						_id: id,
+						status: status,
+						type: type
+					})
+				})
+					.then(res => res.json())
+					.then(data => {
+							if (!data.success) {
+								// Rollback
+								icon.classList.remove(
+									isLocked ? "fa-lock-open" : "fa-lock",
+									isLocked ? "fa-beat" : "fa-shake"
+								);
+								icon.classList.add(
+									isLocked ? "fa-lock" : "fa-lock-open",
+									isLocked ? "fa-shake" : "fa-beat"
+								);
+								alert("Không thể " + (isLocked ? "mở khóa" : "khóa lại") + ": " + (data.message || "Lỗi không xác định"));
+							} else {
+								const itemInCache = dataCache.find(i => i._id === id);
+								if (itemInCache) {
+									itemInCache.IsPublic = status === "unlock";
+								}
+							}
+						}
+					)
+					.catch(err => {
+						console.error("Lỗi khi fetch:", err);
+						icon.classList.remove(
+							isLocked ? "fa-lock-open" : "fa-lock",
+							isLocked ? "fa-beat" : "fa-shake"
+						);
+						icon.classList.add(
+							isLocked ? "fa-lock" : "fa-lock-open",
+							isLocked ? "fa-shake" : "fa-beat"
+						);
+						alert("Lỗi kết nối. Vui lòng thử lại sau.");
+					});
+			});
+			
+		}, 0);
+		return div;
+	}
+	
+	function createVocalTransfer(item, type) {
+		const div = document.createElement("div");
+		div.className = "transfer";
+		const isPublic = item.IsPublic === true; // hoặc item.ispublic tùy bạn dùng field nào
+		
+		const lockIconClass = isPublic
+			? "fa-lock-open fa-beat"
+			: "fa-lock fa-shake";
+		
+		div.innerHTML = `
+		<div class="transfer-logo">
+			<img class="transfer-img" src="${item.img_base64 ? `data:image/png;base64,${item.img_base64}` : '/static/img/me.png'}"/>
+		</div>
+		<span style="overflow: hidden; color: white; width: 340px;">${item.filename || "Unknown"}</span>
+		<dl class="transfer-details">
+			<div style="visibility: hidden"></div>
+			<div>
+				<dt><i class="fa-solid fa-eye"></i></dt>
+				<span id="uview2">${item.view || 0}</span>
+			</div>
+			<div>
+				<span id="utime2">${item.Time || "Không rõ"}</span>
+			</div>
+		</dl>
+		<div class="buu">
+			<span class="icon-button" style="visibility: hidden"><i class="fa-solid fa-pencil"></i></span>
+			<span class="icon-button"><i class="fa-solid ${lockIconClass}"></i></span>
+			<span class="icon-button"><i class="fa-solid fa-share"></i></span>
+			<span class="icon-button"><i class="fa-solid fa-trash-can"></i></span>
+		</div>
+		`;
+		
+		setTimeout(() => {
+			const id = div.querySelector(".music-id")?.value;
+			const lockBtn2 = div.querySelector(".buu .icon-button:nth-child(2)");
+			const lockBtn3 = div.querySelector(".buu .icon-button:nth-child(3)");
+			const lockBtn4 = div.querySelector(".buu .icon-button:nth-child(4)");
+			if (!lockBtn2 || !id) return;
+			
+			lockBtn2.addEventListener("click", () => {
+				const icon = lockBtn2.querySelector("i");
+				const isLocked = icon.classList.contains("fa-lock");
+				
+				const status = isLocked ? "unlock" : "lock";
+				
+				icon.classList.remove(
+					isLocked ? "fa-lock" : "fa-lock-open",
+					isLocked ? "fa-shake" : "fa-beat"
+				);
+				icon.classList.add(
+					isLocked ? "fa-lock-open" : "fa-lock",
+					isLocked ? "fa-beat" : "fa-shake"
+				);
+				
+				fetch("/unlock_file", {
+					method: "POST",
+					headers: {"Content-Type": "application/json"},
+					body: JSON.stringify({
+						_id: id,
+						status: status,
+						type: type
+					})
+				})
+					.then(res => res.json())
+					.then(data => {
+							if (!data.success) {
+								// Rollback
+								icon.classList.remove(
+									isLocked ? "fa-lock-open" : "fa-lock",
+									isLocked ? "fa-beat" : "fa-shake"
+								);
+								icon.classList.add(
+									isLocked ? "fa-lock" : "fa-lock-open",
+									isLocked ? "fa-shake" : "fa-beat"
+								);
+								alert("Không thể " + (isLocked ? "mở khóa" : "khóa lại") + ": " + (data.message || "Lỗi không xác định"));
+							} else {
+								const itemInCache = dataCache.find(i => i._id === id);
+								if (itemInCache) {
+									itemInCache.IsPublic = status === "unlock";
+								}
+							}
+						}
+					)
+					.catch(err => {
+						console.error("Lỗi khi fetch:", err);
+						icon.classList.remove(
+							isLocked ? "fa-lock-open" : "fa-lock",
+							isLocked ? "fa-beat" : "fa-shake"
+						);
+						icon.classList.add(
+							isLocked ? "fa-lock" : "fa-lock-open",
+							isLocked ? "fa-shake" : "fa-beat"
+						);
+						alert("Lỗi kết nối. Vui lòng thử lại sau.");
+					});
+			});
+			
+		}, 0);
+		
+		return div;
+	}
+</script>
+</body>
+</html>

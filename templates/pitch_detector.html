@@ -11,6 +11,52 @@
 	<title>Pitch Detector</title>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 	<link rel="stylesheet" href="/static/css/pitch_detector.css">
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			let defaultIndex = 2; // Mục mặc định
+			let defaultNavButton = document.querySelector(`.nav-button:nth-of-type(${defaultIndex})`);
+			let highlight = document.getElementById("nav-content-highlight");
+			
+			if (defaultNavButton) {
+				let defaultTop = defaultNavButton.offsetTop + "px";
+				highlight.style.top = defaultTop;
+				highlight.dataset.defaultTop = defaultTop; // Lưu vị trí mặc định
+				
+				// Đặt màu cho mục mặc định
+				defaultNavButton.classList.add("active");
+				defaultNavButton.style.color = "var(--navbar-dark-primary)";
+			}
+			
+			document.querySelectorAll(".nav-button").forEach((button) => {
+				button.addEventListener("mouseenter", function () {
+					highlight.style.top = button.offsetTop + "px";
+					resetColors();
+					
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-dark-primary)"; // Mục được hover
+						defaultNavButton.style.color = "var(--navbar-light-secondary)"; // Đổi màu mặc định
+					}
+				});
+				
+				button.addEventListener("mouseleave", function () {
+					resetColors();
+					highlight.style.top = highlight.dataset.defaultTop; // Trả về vị trí mặc định
+					
+					// Nếu rời khỏi mục khác, khôi phục màu mục mặc định
+					defaultNavButton.style.color = "var(--navbar-dark-primary)";
+				});
+			});
+			
+			function resetColors() {
+				document.querySelectorAll(".nav-button").forEach(button => {
+					button.classList.remove("active");
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-light-secondary)"; // Đặt lại màu khi không phải mặc định
+					}
+				});
+			}
+		});
+	</script>
 </head>
 <body>
 <h1 style="color: rgb(256, 188, 188); width: 100%; text-align: center;">Pitch Detector</h1>

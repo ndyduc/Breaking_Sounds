@@ -2,6 +2,7 @@ import io
 import os
 import subprocess
 import base64
+import threading
 from io import BytesIO
 import time
 import urllib.parse
@@ -98,9 +99,24 @@ def get_waveform():
 		return "No file uploaded", 400
 
 	file = request.files["file"]
-	img_buffer = create_waveform(file)
+	result = {}
 
-	return send_file(img_buffer, mimetype="image/png")
+	def task(file, result_dict):
+		try:
+			img_buffer = create_waveform(file)
+			result_dict["buffer"] = img_buffer
+		except Exception as e:
+			result_dict["error"] = str(e)
+
+	thread_result = {}
+	t = threading.Thread(target=task, args=(file, thread_result))
+	t.start()
+	t.join()  # chờ thread kết thúc (nếu bạn muốn non-blocking thì không dùng join())
+
+	if "error" in thread_result:
+		return f"Lỗi khi tạo waveform: {thread_result['error']}", 500
+
+	return send_file(thread_result["buffer"], mimetype="image/png")
 
 
 @sounds.route("/save_vocals", methods=["POST"])
@@ -110,11 +126,12 @@ def save_vocals():
 			return jsonify({"status": False, "message": "User not logged in"}), 401
 
 		audio_data = request.files.get("audio")
+		img = request.files.get("image")
 		if audio_data:
 			if is_vocal_exists(session["user_id"], audio_data.filename):
 				return jsonify({"status": False, "message": "File already saves !"})
 			else:
-				vocal_id = save_vocal(session.get("user_id"), audio_data)
+				vocal_id = save_vocal(session.get("user_id"), audio_data, img)
 				if vocal_id is not None:
 					user = get_user(ob_id=session.get("user_id"))
 					return jsonify({
@@ -150,6 +167,7 @@ def result_sheet():
 		user_id = session.get("user_id") if session.get("user_id") else str(int(time.time()))
 
 		filename = secure_filename(file.filename)
+		session["musicxml_name"] = filename[:-4]
 		user_folder = os.path.join(DATA_LOGS_DIR, user_id, "uploads")
 		os.makedirs(user_folder, exist_ok=True)
 		file_path = os.path.join(user_folder, filename)

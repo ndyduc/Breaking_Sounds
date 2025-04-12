@@ -1,18 +1,23 @@
 from flask import *
 from google.oauth2 import id_token
-from google.auth.transport import requests
 from google.auth.transport.requests import Request
 from src.data_connecter import *
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
+from google.auth.exceptions import GoogleAuthError
+from google.auth.transport.requests import Request as GoogleRequest
+from google.oauth2 import id_token as google_id_token
+import requests.exceptions
 from dotenv import load_dotenv
 
 import os
+import logging
+google = Blueprint('google', __name__, url_prefix='/')
 
 
-load_dotenv()  # Thay thế bằng một secret key an toàn
-# Cấu hình OAuth 2.0
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Chỉ sử dụng trong môi trường phát triển
+load_dotenv()
+
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
@@ -27,13 +32,13 @@ flow = Flow.from_client_config(
             "token_uri": "https://oauth2.googleapis.com/token",
         }
     },
-    scopes=["openid",
-            "https://www.googleapis.com/auth/userinfo.profile",
-            "https://www.googleapis.com/auth/userinfo.email"],
+    scopes=[
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email"
+    ],
     redirect_uri="https://127.0.0.1:3202/login/callback",
 )
-
-google = Blueprint('google', __name__, url_prefix='/')
 
 
 @google.route('/login_gg')
@@ -49,6 +54,8 @@ def login():
 @google.route('/login/callback')
 def callback():
     try:
+        print("CLIENT_ID:", repr(GOOGLE_CLIENT_ID))
+        print("CLIENT_SECRET:", repr(GOOGLE_CLIENT_SECRET))
         flow.fetch_token(authorization_response=request.url)
         if not session['state'] == request.args['state']:
             return 'State mismatch', 400
@@ -56,12 +63,11 @@ def callback():
         credentials = flow.credentials
         id_info = id_token.verify_oauth2_token(
             credentials.id_token,
-            requests.Request(),
+            Request(),
             GOOGLE_CLIENT_ID
         )
         # print(id_info)
         # Lưu thông tin người dùng vào session
-
         from main import decode_img
         if 'user_id' in session:
             if 'picture' in session:
@@ -96,8 +102,21 @@ def callback():
 
         session['google_id'] = id_info.get('sub')
         return redirect(url_for('index'))
+
+    except requests.exceptions.HTTPError as http_err:
+        print(f"[HTTPError] Lỗi khi lấy token: {http_err}")
+        return "Lỗi kết nối đến Google", 400
+
+    except GoogleAuthError as auth_err:
+        print(f"[GoogleAuthError] Lỗi xác thực: {auth_err}")
+        return "Lỗi xác thực Google OAuth2", 400
+
+    except ValueError as val_err:
+        print(f"[ValueError] Lỗi khi kiểm tra token ID: {val_err}")
+        return "Token không hợp lệ", 400
+
     except Exception as e:
-        print(f"Lỗi khi lấy token: {e}")
+        print(f"[UnknownError] Lỗi không xác định khi lấy token: {e}")
         return "Lỗi xác thực OAuth2", 400
 
 

@@ -10,6 +10,13 @@
 	<link rel="stylesheet" href="/static/css/notes_genarate.css">
 	<link rel="icon" href="/static/logo/music_note_white.png">
 	<title>Sheet Viewer</title>
+	<style>
+		#view:hover{
+			background-color: rgb(256, 188, 188);
+			color: white;
+			box-shadow: 0 0 15px 15px rgb(256, 188, 188);
+		}
+	</style>
 	<script>
 		document.addEventListener("DOMContentLoaded", function () {
 			let defaultIndex = 3; // Mục mặc định
@@ -69,14 +76,14 @@
 		<label for="file" class="custom-file-upload">Browse file</label>
 	</form>
 	<div id="file_info"
-	     style="display: none; width:30%; margin-top: 10px;color: white; font-size: 18px; font-weight: bold;">
+	     style="display: none; width:30%; margin-top: 10px;color: white;">
 		<img id="cancel" src="../static/logo/X.svg" alt="Waveform">
 		<p><strong>File Name:</strong> <span id="file-name"></span></p>
-		<div style="display: flex; justify-content: space-between; margin: 10px 0;">
+		<div style="display: flex; justify-content: space-between; margin: 30px 0 10px 0;">
 			<p><strong>File Type:</strong> <span id="file-type"></span></p>
 			<p><strong>File Size:</strong> <span id="file-size"></span></p>
 		</div>
-		<button type="submit" id="view">View file</button>
+		<button type="submit" id="view" style="padding: 5px 10px; display: flex; justify-content: center; align-items: center; width: 200px; height: 40px; border: 0; border-radius: 15px; background-color: white; color: rgb(256, 188, 188); font-size: 22px; font-family: serif; position: relative; left: 28%; top: 30px; margin-bottom: 30px;">View file</button>
 	</div>
 	
 	<script>

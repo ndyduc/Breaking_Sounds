@@ -10,33 +10,127 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="Content-Security-Policy" content="font-src 'self' data:;">
 	<title>Sheet Music Editor</title>
-	<style>
-		html::-webkit-scrollbar, body::-webkit-scrollbar {
-			display: none;
-		}
-		
-		
-		a {
-			color: #fff;
-			text-decoration: none;
-		}
-		
-		body {
-			margin: 0;
-			padding: 0;
-			height: 100vh;
-			color: white;
-		}
-	</style>
+	<link rel="icon" href="/static/logo/music_note_white.png">
+	<link rel="stylesheet" href="/static/css/sheet_editor.css">
 	<script src="https://www.noteflight.com/clientapi/2.0.0/nfclient.js"></script>
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			let defaultIndex = 5; // Mục mặc định
+			let defaultNavButton = document.querySelector(`.nav-button:nth-of-type(${defaultIndex})`);
+			let highlight = document.getElementById("nav-content-highlight");
+			
+			if (defaultNavButton) {
+				let defaultTop = defaultNavButton.offsetTop + "px";
+				highlight.style.top = defaultTop;
+				highlight.dataset.defaultTop = defaultTop; // Lưu vị trí mặc định
+				
+				// Đặt màu cho mục mặc định
+				defaultNavButton.classList.add("active");
+				defaultNavButton.style.color = "var(--navbar-dark-primary)";
+			}
+			
+			document.querySelectorAll(".nav-button").forEach((button) => {
+				button.addEventListener("mouseenter", function () {
+					highlight.style.top = button.offsetTop + "px";
+					resetColors();
+					
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-dark-primary)"; // Mục được hover
+						defaultNavButton.style.color = "var(--navbar-light-secondary)"; // Đổi màu mặc định
+					}
+				});
+				
+				button.addEventListener("mouseleave", function () {
+					resetColors();
+					highlight.style.top = highlight.dataset.defaultTop; // Trả về vị trí mặc định
+					
+					// Nếu rời khỏi mục khác, khôi phục màu mục mặc định
+					defaultNavButton.style.color = "var(--navbar-dark-primary)";
+				});
+			});
+			
+			function resetColors() {
+				document.querySelectorAll(".nav-button").forEach(button => {
+					button.classList.remove("active");
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-light-secondary)"; // Đặt lại màu khi không phải mặc định
+					}
+				});
+			}
+		});
+	</script>
 </head>
 <body style="background-color: white">
+<div id="export-out">
+	<div class="asd">
+		<div class="na">File</div>
+		<hr>
+		<div class="content">
+			<div class="bun" id="pdf"><i class="fas fa-file-arrow-down fa-lg"></i><span>Export PDF</span></div>
+			<div class="bun" id="muscixml"><i class="fas fa-bookmark fa-lg"></i><span>Save Sheet</span></div>
+		</div>
+	</div>
+	<div class="clo">
+		<i class="fas fa-caret-left fa-2x"></i>
+	</div>
+
+</div>
+
 <div id="score1"></div>
 
+<div class="security1 bga"></div>
+<div class="security2 bga">
+	<div class="part">
+		<strong style="font-size: 21px">
+			Here’s a short version of the usage policy for Noteflight’s Sheet Editor:
+		</strong>
+	</div>
+	<div class="part">
+		<strong>Noteflight Sheet Editor Usage Policy</strong>
+		<ol>
+			<li><strong>Intellectual Property:</strong> All content created with Sheet Editor is either owned by the
+				user or Noteflight, depending on copyright rights. Users must not infringe on others’ copyrights without
+				permission.
+			</li>
+			<li><strong>Prohibited Actions:</strong> Users may not copy, distribute, sell, or share any part of the
+				editor’s product without explicit permission from Noteflight or the copyright holder.
+			</li>
+			<li><strong>Proper Use:</strong> The Sheet Editor is intended for personal and educational use. Commercial
+				use requires permission from Noteflight.
+			</li>
+			<li><strong>Privacy & Security:</strong> Noteflight commits to protecting user privacy and data. Users must
+				not share sensitive or personal information through the tool.
+			</li>
+			<li><strong>Modifications and Termination:</strong> Noteflight reserves the right to modify or terminate
+				access to the editor if users violate the terms.
+			</li>
+			<li><strong>User Commitment:</strong> Users agree not to create content that violates legal regulations or
+				harms others.
+			</li>
+		</ol>
+	</div>
+</div>
+<div class="security3 bga"></div>
+<div class="security4 bga"></div>
+
 <script>
+	document.querySelector('.clo').addEventListener('click', function () {
+		const asd = document.querySelector('.asd');
+		const icon = this.querySelector('i');
+		
+		const isHidden = getComputedStyle(asd).display === 'none';
+		
+		asd.style.display = isHidden ? 'block' : 'none';
+		
+		icon.classList.toggle('rotated');
+	});
+	
+	const urlParams = new URLSearchParams(window.location.search);
+	const path = urlParams.get('path');
+	
 	let options = {
 		host: 'www.noteflight.com',
-		width: '95%',  // Điều chỉnh để chiều rộng là 100% của màn hình
+		width: '95%',
 		height: 850,
 		hidePlaybackControls: true,
 		viewParams: {
@@ -49,20 +143,109 @@
 	
 	let scoreView = new NFClient.ScoreView('score1', 'fcfd6d0bc0770f67cdbe1b8129456521fec090a0', options);
 	scoreView.addEventListener('editorReady', function () {
-		fetch('/get_musicxml')
+		
+	});
+	
+	function loaddata(path) {
+		fetch(`/get_musicxml?path=${encodeURIComponent(path)}`)
 			.then(response => {
 				if (!response.ok) {
 					throw new Error('File not found');
 				}
-				return response.text(); // Sử dụng `response.text()` để lấy dữ liệu
+				return response.text();
 			})
 			.then(data => {
-				console.log('MusicXML data:', data);
-				scoreView.loadMusicXML(data); // Gọi hàm loadMusicXML khi dữ liệu đã có
+				scoreView.loadMusicXML(data);
 			})
 			.catch(error => {
 				console.error('Error:', error);
 			});
+	}
+	
+	function export_pdf() {
+		const pdf = scoreView.getMusicXML();
+		pdf.done((xml) => {
+			if (xml) {
+				fetch('/save_pdf', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						musicxml: xml
+					})
+				})
+					.then(response => {
+						if (!response.ok) {
+							throw new Error("Không thể xuất PDF");
+						}
+						return response.blob();
+					})
+					.then(blob => {
+						const url = window.URL.createObjectURL(blob);
+						const a = document.createElement('a');
+						a.href = url;
+						const now = new Date();
+						const timestamp = now.toISOString().replace(/[:.]/g, '-'); // ISO format, thay : và . để tránh lỗi tên file
+						a.download = `score_${timestamp}.pdf`;
+						document.body.appendChild(a);
+						a.click();
+						a.remove();
+						window.URL.revokeObjectURL(url);
+					})
+					.catch(error => {
+						console.error("Lỗi khi xuất PDF:", error);
+						alert("Đã xảy ra lỗi khi xuất PDF.");
+					});
+			} else {
+				alert("Không có dữ liệu MusicXML");
+			}
+		});
+	}
+	
+	function save_musicxml() {
+		const result = scoreView.getMusicXML();
+		result.done((xml) => {
+			if (xml) {
+				const content = document.querySelector('#TextField-1355 text')?.textContent.trim() || null;
+				console.log(content);
+				fetch('/save_musicxml', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						musicxml: xml,
+						content: content
+					})
+				})
+					.then(res => res.json())
+					.then(data => {
+						alert(data.message);
+					})
+					.catch(err => {
+						console.error('Lỗi khi gửi dữ liệu:', err);
+						alert('Gửi thất bại.');
+					});
+			} else {
+				console.warn("Không có dữ liệu MusicXML");
+			}
+		});
+	}
+	
+	scoreView.addEventListener('scoreDataLoaded', function handler() {
+		document.querySelectorAll('.bga').forEach(function (element) {
+			element.style.display = 'none';
+		});
+		document.getElementById("export-out").style.display = "flex";
+		
+		if (path) {
+			loaddata(path);
+			scoreView.removeEventListener('scoreDataLoaded', handler);
+		}
+		
+		document.getElementById("pdf").addEventListener("click", export_pdf);
+		document.getElementById("muscixml").addEventListener("click", save_musicxml);
 	});
 
 
