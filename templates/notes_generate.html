@@ -77,11 +77,18 @@
 					let audioPlayer = document.getElementById("audio_player")
 					fetch(audioPlayer.src)
 						.then(response => response.blob())
-						.then(blob => {
+						.then(async blob => {
 							let formData = new FormData();
 							let name = document.getElementById("file_name").textContent;
 							const imgElement = document.getElementById("file_image");
-							const blob2 = dataURLToBlob(imgElement.src);
+							const src = imgElement?.src || "/static/img/me.png";
+							const blob2 = await getImageBlob(src);
+							
+							if (blob2 instanceof Blob) {
+								formData.append("image", blob2, "avatar.png");
+							} else {
+								console.error("Không thể tạo Blob từ ảnh:", src);
+							}
 							
 							formData.append("audio", blob, name);
 							formData.append("image", blob2, "album_art.jpg");
@@ -117,17 +124,53 @@
 	});
 	
 	function dataURLToBlob(dataURL) {
-		const parts = dataURL.split(",");
-		const mime = parts[0].match(/:(.*?);/)[1];
-		const binary = atob(parts[1]);
-		let len = binary.length;
-		let u8arr = new Uint8Array(len);
-		
-		while (len--) {
-			u8arr[len] = binary.charCodeAt(len);
+		if (!dataURL || typeof dataURL !== "string" || !dataURL.startsWith("data:")) {
+			console.error("dataURL không hợp lệ:", dataURL);
+			return null;
 		}
 		
-		return new Blob([u8arr], {type: mime});
+		const parts = dataURL.split(',');
+		if (parts.length !== 2 || !parts[0].includes(';base64')) {
+			console.error("dataURL không đúng định dạng base64:", dataURL);
+			return null;
+		}
+		
+		const mimeMatch = parts[0].match(/:(.*?);/);
+		if (!mimeMatch || !mimeMatch[1]) {
+			console.error("Không tìm thấy MIME type:", dataURL);
+			return null;
+		}
+		
+		const mime = mimeMatch[1];
+		const byteString = atob(parts[1]);
+		let arrayBuffer = new ArrayBuffer(byteString.length);
+		let uint8Array = new Uint8Array(arrayBuffer);
+		for (let i = 0; i < byteString.length; i++) {
+			uint8Array[i] = byteString.charCodeAt(i);
+		}
+		return new Blob([uint8Array], {type: mime});
+	}
+	
+	async function getImageBlob(src) {
+		if (!src || typeof src !== "string") return null;
+		
+		if (src.startsWith("data:")) {
+			// Ảnh dạng base64
+			return dataURLToBlob(src);
+		} else {
+			// Ảnh từ URL hoặc file tĩnh
+			try {
+				const response = await fetch(src);
+				if (!response.ok) {
+					console.error("Không tải được ảnh từ URL:", src);
+					return null;
+				}
+				return await response.blob();
+			} catch (err) {
+				console.error("Lỗi khi fetch ảnh từ URL:", src, err);
+				return null;
+			}
+		}
 	}
 </script>
 <script>
@@ -266,7 +309,7 @@
 		let formData = new FormData();
 		formData.append("file", file);
 		
-		fetch("{{ url_for('sounds.get_waveform') }}", {
+		fetch("/get_waveform", {
 			method: "POST",
 			body: formData
 		})
@@ -308,11 +351,11 @@
 					let base64String = data.reduce((acc, byte) => acc + String.fromCharCode(byte), "");
 					document.getElementById("file_image").src = `data:${format};base64,${btoa(base64String)}`;
 				} else {
-					document.getElementById("file_image").src = "default-thumbnail.png";
+					document.getElementById("file_image").src = "/static/img/me.png";
 				}
 			},
 			onError: function () {
-				document.getElementById("file_image").src = "default-thumbnail.png";
+				document.getElementById("file_image").src = "/static/img/me.png";
 			}
 		});
 	}

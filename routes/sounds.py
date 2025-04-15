@@ -95,28 +95,43 @@ def get_audio(user_id, filename):
 
 @sounds.route("/get_waveform", methods=["POST"])
 def get_waveform():
-	if "file" not in request.files:
-		return "No file uploaded", 400
+	try:
+		if "file" in request.files:
+			file = request.files["file"]
+			file_data = file.read()
+		else:
+			file_path = request.form.get("file_path")
+			if not file_path or not os.path.exists(file_path):
+				return "File path không hợp lệ hoặc không tồn tại", 400
 
-	file = request.files["file"]
-	result = {}
+			with open(file_path, "rb") as f:
+				file_data = f.read()
 
-	def task(file, result_dict):
-		try:
-			img_buffer = create_waveform(file)
-			result_dict["buffer"] = img_buffer
-		except Exception as e:
-			result_dict["error"] = str(e)
+		thread_result = {}
 
-	thread_result = {}
-	t = threading.Thread(target=task, args=(file, thread_result))
-	t.start()
-	t.join()  # chờ thread kết thúc (nếu bạn muốn non-blocking thì không dùng join())
+		def task(filein, result_dict):
+			try:
+				if isinstance(filein, bytes):
+					img_buffer = create_waveform(io.BytesIO(filein))  # nếu là bytes thì dùng BytesIO
+				else:
+					img_buffer = create_waveform(filein)  # nếu là file-like object
 
-	if "error" in thread_result:
-		return f"Lỗi khi tạo waveform: {thread_result['error']}", 500
+				result_dict["buffer"] = img_buffer
+			except Exception as e:
+				result_dict["error"] = str(e)
 
-	return send_file(thread_result["buffer"], mimetype="image/png")
+		t = threading.Thread(target=task, args=(file_data, thread_result))
+		t.start()
+		t.join()
+
+		if "error" in thread_result:
+			return f"Lỗi khi tạo waveform: {thread_result['error']}", 500
+
+		return send_file(thread_result["buffer"], mimetype="image/png"), 200
+
+	except Exception as e:
+		print(f"[Waveform Error] {e}")
+		return f"Lỗi server: {e}", 500
 
 
 @sounds.route("/save_vocals", methods=["POST"])

@@ -120,9 +120,11 @@ def save_musicxml():
 		data = request.get_json()
 
 		musicxml = data.get('musicxml')
-		# instrument = data.get('content')
 		userid = session.get("user_id")
 		name = data.get('name', session.get("musicxml_name"))
+		if name is None:
+			name = data.get('content')
+
 		ispublic = False
 
 		if not musicxml or not userid:
@@ -133,9 +135,9 @@ def save_musicxml():
 		insert_id = insert_musicxml(userid=userid, musicxml=musicxml_binary, ispublic=ispublic, name=name)
 
 		if insert_id:
-			return jsonify({"message": "Lưu thành công", "id": insert_id}), 200
+			return jsonify({"message": "Save at library !", "id": insert_id}), 200
 		else:
-			return jsonify({"message": "Lưu thất bại"}), 500
+			return jsonify({"message": "Error, please try again !"}), 500
 
 	except Exception as e:
 		print("Lỗi khi xử lý /save_musicxml:", e)
@@ -197,14 +199,16 @@ def get_libary():
 		return redirect(url_for("loginbase"))
 
 	try:
-		type = request.form.get("type")
+		kind = request.form.get("type")
 		amount = int(request.form.get("amount"))
+		key = request.form.get("keyword")
+		if key is None:
+			key = None
 
-		user_data = get_all_user_data(user_id, amount)
+		user_data, amount = get_all_user_data(user_id, kind, 20, amount, key)
 
-		return jsonify(user_data)
+		return jsonify({"data": user_data, "amount": amount})
 	except Exception as e:
-		print(e)
 		return jsonify({"message": str(e)}), 500
 
 
@@ -226,7 +230,7 @@ def unlock_file():
 		if _type == "musicxml":
 			success = update_musicxml(doc_id, ispublic=True)
 		else:
-			success = update_vocal(doc_id, public= True)
+			success = update_vocal(doc_id, public=True)
 	else:
 		if _type == "musicxml":
 			success = update_musicxml(doc_id, ispublic=False)
@@ -237,3 +241,131 @@ def unlock_file():
 		return jsonify({"success": True})
 	else:
 		return jsonify({"success": False, "message": "Không thể cập nhật trạng thái file."})
+
+
+@non.route('/check_amount_data', methods=['POST'])
+def check_amount_data():
+	user_id = session.get("user_id")
+	if user_id is None:
+		return redirect(url_for("loginbase"))
+
+	try:
+		kind = request.form.get("type", "all")
+		total = count_user_data(user_id, kind)
+		return jsonify({"total": total})
+	except Exception as e:
+		print(f"[Check Amount Data Error] {e}")
+		return jsonify({"message": str(e)}), 500
+
+
+@non.route("/delete_data", methods=["POST"])
+def delete_data():
+	user_id = session.get("user_id")
+	if user_id is None:
+		flash("Session time out, please login to continue !")
+		return redirect(url_for("loginbase"))
+
+	kind = request.form.get("type")
+	data_id = request.form.get("data_id")
+	print(kind, data_id)
+
+	check = remove_data(data_id, kind)
+	if check:
+		return jsonify({"success": True, "message": "Data deleted successfully."})
+	else:
+		return jsonify({"success": True, "message": "Error when deleting data."}), 500
+
+
+@non.route("/view_file", methods=["GET"])
+def view_file():
+	kind = request.args.get("kind")
+	item_id = request.args.get("item_id")
+
+	if not kind or not item_id:
+		return abort(400, "Thiếu thông tin king hoặc item_id")
+
+	item = get_file_by_kind_and_id(kind, item_id)
+	user_id = session.get("user_id") if session.get("user_id") else str(int(time.time()))
+
+	try:
+		if kind == "sheet":
+			filename = item.get("Name") + ".musicxml"
+			save_dir = os.path.join(DATA_LOGS_DIR, user_id, "musicxml")
+			file_bytes = item["MusicXML"]
+
+		elif kind == "vocal":
+			filename = item["filename"]
+			subfolder = os.path.splitext(filename)[0]
+			save_dir = os.path.join(DATA_LOGS_DIR, user_id, "local_voice", subfolder)
+			file_bytes = item["data"]
+
+		else:
+			return abort(400, "Fail to view file.")
+
+		if not item["IsPublic"]:
+			if user_id != item["user_id"]:
+				flash("This contend is Not public !")
+				return redirect(url_for("index"))
+
+		os.makedirs(save_dir, exist_ok=True)
+		file_path = os.path.join(save_dir, filename)
+
+		with open(file_path, "wb") as f:
+			f.write(file_bytes)
+
+		if kind == "sheet":
+			update_musicxml(item_id, view=True)
+			with open(file_path, "rb") as f:
+				existing_data = f.read()
+
+			xml_header = '<?xml version="1.0" encoding="utf-8"?>\n'.encode('utf-8')
+
+			with open(file_path, "wb") as f:
+				f.write(xml_header)  # Ghi header vào đầu
+				f.write(existing_data)  # Ghi lại phần dữ liệu cũ
+
+			return render_template("sheet_music.html", result_path=file_path)
+		else:
+			update_vocal(item_id, view=True)
+			item["data"] = os.path.join("static/Users", user_id, "local_voice", subfolder, filename)
+			return render_template("share_vocal.html", item=item)
+
+	except Exception as e:
+		print(f"[Save File Error] {e}")
+		return jsonify({"success": False, "message": "Lỗi khi xem file."}), 500
+
+
+@non.route("/get_xmlpath_for_edit", methods=["POST"])
+def get_xmlpath_for_edit():
+	user_id = session.get("user_id")
+	if user_id is None:
+		return redirect(url_for("loginbase"))
+
+	try:
+		file_id = request.form.get("file_id")
+
+		item = get_file_by_kind_and_id("sheet", file_id)
+		filename = item.get("Name") + ".musicxml"
+		save_dir = os.path.join(DATA_LOGS_DIR, user_id, "musicxml")
+		file_bytes = item["MusicXML"]
+
+		os.makedirs(save_dir, exist_ok=True)
+		file_path = os.path.join(save_dir, filename)
+
+		with open(file_path, "wb") as f:
+			f.write(file_bytes)
+
+		with open(file_path, "rb") as f:
+			existing_data = f.read()
+
+		xml_header = '<?xml version="1.0" encoding="utf-8"?>\n'.encode('utf-8')
+
+		with open(file_path, "wb") as f:
+			f.write(xml_header)
+			f.write(existing_data)
+
+		return jsonify({"success": True, "musicxmlPath": file_path}), 200
+
+	except Exception as e:
+		print(f"[Get XML Path Error] {e}")
+		return jsonify({"success": False, "message": str(e)}), 500

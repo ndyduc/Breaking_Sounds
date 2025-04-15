@@ -65,7 +65,7 @@ def insert_musicxml(userid, musicxml, ispublic=False, name=None, instrument="Pia
 		return None
 
 
-def update_musicxml(doc_id, name=None, instrument=None, ispublic=None, musicxml=None, newtime = False):
+def update_musicxml(doc_id, name=None, instrument=None, ispublic=None, musicxml=None, view=False, newtime=False):
 	try:
 		update_fields = {}
 
@@ -77,17 +77,23 @@ def update_musicxml(doc_id, name=None, instrument=None, ispublic=None, musicxml=
 			update_fields["IsPublic"] = bool(ispublic)
 		if musicxml is not None:
 			update_fields["MusicXML"] = musicxml
-
-		if not update_fields:
-			print("Không có trường nào để cập nhật.")
-			return False
-
 		if newtime:
 			update_fields["Time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+		update_query = {}
+		if update_fields:
+			update_query["$set"] = update_fields
+
+		if view:
+			update_query["$inc"] = {"Views": 1}
+
+		if not update_query:
+			print("Không có trường nào để cập nhật.")
+			return False
+
 		result = Sheet.update_one(
 			{"_id": ObjectId(doc_id)},
-			{"$set": update_fields}
+			update_query
 		)
 
 		return result.modified_count > 0
@@ -113,7 +119,7 @@ def save_vocal(user_id, file, image, ispublic=False):
 			"img": img_binary,
 			"Time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
 			"IsPublic": bool(ispublic),
-			"view": 0
+			"Views": 0
 		}
 		result = Vocals.insert_one(mp3_document)
 
@@ -124,7 +130,7 @@ def save_vocal(user_id, file, image, ispublic=False):
 		return None
 
 
-def update_vocal(doc_id, filename=None, file=None, image=None, public=None, newtime=False):
+def update_vocal(doc_id, filename=None, file=None, image=None, public=None, view=False, newtime=False):
 	try:
 		update_fields = {}
 
@@ -143,15 +149,22 @@ def update_vocal(doc_id, filename=None, file=None, image=None, public=None, newt
 		if newtime:
 			update_fields["Time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-		if not update_fields:
+		update_query = {}
+		if update_fields:
+			update_query["$set"] = update_fields
+
+		if view:
+			print(doc_id)
+			update_query["$inc"] = {"Views": 1}
+
+		if not update_fields and not view:
 			print("Không có trường nào để cập nhật.")
 			return False
 
 		result = Vocals.update_one(
 			{"_id": ObjectId(doc_id)},
-			{"$set": update_fields}
+			update_query
 		)
-
 		return result.matched_count > 0
 
 	except Exception as e:
@@ -159,43 +172,204 @@ def update_vocal(doc_id, filename=None, file=None, image=None, public=None, newt
 		return False
 
 
-def get_all_user_data(userid, limit=None):
+def count_user_data(user_id: str, kind: str) -> int:
+	user_obj_id = ObjectId(user_id)
+
+	if kind == "musicxml":
+		return Sheet.count_documents({"user_id": user_obj_id})
+	elif kind == "vocal":
+		return Vocals.count_documents({"user_id": user_obj_id})
+	else:
+		return (
+			Sheet.count_documents({"user_id": user_obj_id}) +
+			Vocals.count_documents({"user_id": user_obj_id})
+		)
+
+
+def remove_data(data_id, kind):
+	try:
+		collection = None
+		if kind == "musicxml":
+			collection = Sheet
+		elif kind == "vocal":
+			collection = Vocals
+		else:
+			print(f"Không xác định được loại dữ liệu: {kind}")
+			return False
+
+		result = collection.delete_one({"_id": ObjectId(data_id)})
+		if result.deleted_count == 1:
+			print(f"Đã xóa {kind} có _id: {data_id}")
+			return True
+		else:
+			print(f"Không tìm thấy {kind} để xóa với _id: {data_id}")
+			return False
+
+	except PyMongoError as e:
+		print(f"Lỗi MongoDB khi xóa {kind}: {e}")
+		return False
+	except Exception as e:
+		print(f"Lỗi không xác định khi xóa {kind}: {e}")
+		return False
+
+
+def get_all_user_data(userid, kind, limit, index, keyword=None):
 	try:
 		user_obj_id = ObjectId(userid)
+		amount_data = count_user_data(userid, kind)
+		if ((index - 1) * limit) + 1 > amount_data:
+			index = amount_data // limit if amount_data % limit == 0 else amount_data // limit + 1
 
-		# Lấy Sheet data
-		sheet_data = []
-		for item in Sheet.find({"user_id": user_obj_id}):
-			item["type"] = "musicxml"
+		def process_extra(item):
+			if item["type"] == "vocal":
+				item["filename"] = item.get("filename", "")[:-4]
+				if "img" in item:
+					item["img_base64"] = base64.b64encode(item["img"]).decode("utf-8")
+					del item["img"]
 			item["_id"] = str(item["_id"])
-			del item["user_id"]
-			del item["MusicXML"]
-			sheet_data.append(item)
+			return item
 
-		# Lấy Vocal data
-		vocal_data = []
-		for item in Vocals.find({"user_id": user_obj_id}):
-			item["type"] = "vocal"
-			item["_id"] = str(item["_id"])
-			del item["user_id"]
-			del item["data"]
-			if "img" in item:
-				item["img_base64"] = base64.b64encode(item["img"]).decode("utf-8")
-				del item["img"]
-			vocal_data.append(item)
+		# Chuẩn hóa keyword (nếu có)
+		keyword_filter = {}
+		if keyword:
+			keyword = keyword.lower()
+			regex = {"$regex": keyword, "$options": "i"}
 
-		print(vocal_data)
-		all_data = sheet_data + vocal_data
-		all_data.sort(key=lambda x: x["Time"], reverse=True)
+		if kind == "musicxml":
+			match_stage = {"user_id": user_obj_id}
+			if keyword:
+				match_stage["$or"] = [
+					{"Instrument": regex},
+					{"Name": regex},
+					{"Time": regex}
+				]
+			pipeline = [
+				{"$match": match_stage},
+				{"$project": {
+					"type": {"$literal": "musicxml"},
+					"Time": 1,
+					"IsPublic": 1,
+					"Instrument": 1,
+					"Name": 1,
+					"_id": 1,
+					"Views": 1
+				}},
+				{"$sort": {"Time": -1}},
+				{"$skip": (index - 1) * limit},
+				{"$limit": limit}
+			]
+			result = Sheet.aggregate(pipeline)
 
-		if limit:
-			all_data = all_data[:limit]
+		elif kind == "vocal":
+			match_stage = {"user_id": user_obj_id}
+			if keyword:
+				match_stage["$or"] = [
+					{"filename": regex},
+					{"Time": regex}
+				]
+			pipeline = [
+				{"$match": match_stage},
+				{"$project": {
+					"type": {"$literal": "vocal"},
+					"Time": 1,
+					"IsPublic": 1,
+					"Views": 1,
+					"filename": 1,
+					"img": 1,
+					"_id": 1
+				}},
+				{"$sort": {"Time": -1}},
+				{"$skip": (index - 1) * limit},
+				{"$limit": limit}
+			]
+			result = Vocals.aggregate(pipeline)
 
-		return all_data
+		else:
+			# Merge 2 collection
+			music_match = {"user_id": user_obj_id}
+			vocal_match = {"user_id": user_obj_id}
+			if keyword:
+				music_match["$or"] = [
+					{"Instrument": regex},
+					{"Name": regex},
+					{"Time": regex}
+				]
+				vocal_match["$or"] = [
+					{"filename": regex},
+					{"Time": regex}
+				]
+
+			pipeline = [
+				{"$match": music_match},
+				{"$project": {
+					"type": {"$literal": "musicxml"},
+					"Time": 1,
+					"IsPublic": 1,
+					"Instrument": 1,
+					"Views": 1,
+					"Name": 1,
+					"_id": 1
+				}},
+				{"$unionWith": {
+					"coll": "Vocals",
+					"pipeline": [
+						{"$match": vocal_match},
+						{"$project": {
+							"type": {"$literal": "vocal"},
+							"Time": 1,
+							"filename": 1,
+							"IsPublic": 1,
+							"Views": 1,
+							"img": 1,
+							"_id": 1
+						}},
+					]
+				}},
+				{"$sort": {"Time": -1}},
+				{"$skip": (index - 1) * limit},
+				{"$limit": limit}
+			]
+			result = Sheet.aggregate(pipeline)
+
+		final_data = [process_extra(item) for item in result]
+		return final_data, index
 
 	except Exception as e:
 		print(f"[Get All User Data Error] {e}")
 		return None
+
+
+def get_file_by_kind_and_id(kind, item_id):
+	try:
+		collection = None
+
+		if kind == "vocal":
+			collection = Vocals
+		elif kind == "sheet":
+			collection = Sheet
+		else:
+			return False
+
+		item = collection.find_one({"_id": ObjectId(item_id)})
+		if not item:
+			return False
+
+		# Convert ObjectId về string để trả JSON
+		item["_id"] = str(item["_id"])
+		item["user_id"] = str(item["user_id"])
+		if kind == "vocal":
+			if "img" in item and item["img"]:
+				img_base64 = base64.b64encode(item["img"]).decode("utf-8")
+				item["img"] = f"data:image/png;base64,{img_base64}"
+
+		return item
+
+	except PyMongoError as e:
+		print(f"[MongoDB Error] {e}")
+		return False
+	except Exception as e:
+		print(f"[Unknown Error] {e}")
+		return False
 
 
 def img_to_binary(image):

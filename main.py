@@ -275,6 +275,11 @@ def decode_img(img_bytes):
 		return None
 
 
+@app.route('/favicon.ico')
+def favicon():
+	return send_from_directory('static', 'favicon.ico')
+
+
 @app.route('/authorize')
 def authorize():
 	flow = Flow.from_client_secrets_file(

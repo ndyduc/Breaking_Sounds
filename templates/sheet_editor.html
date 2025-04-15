@@ -207,8 +207,13 @@
 		const result = scoreView.getMusicXML();
 		result.done((xml) => {
 			if (xml) {
-				const content = document.querySelector('#TextField-1355 text')?.textContent.trim() || null;
-				console.log(content);
+				console.log(xml);
+				const content = prompt("Enter title for sheet:", "");
+				if (!content) {
+					alert("Name can't be empty.");
+					return;
+				}
+				
 				fetch('/save_musicxml', {
 					method: 'POST',
 					headers: {
@@ -216,7 +221,7 @@
 					},
 					body: JSON.stringify({
 						musicxml: xml,
-						content: content
+						content: content.trim()
 					})
 				})
 					.then(res => res.json())

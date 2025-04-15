@@ -12,6 +12,7 @@
 	<link rel="stylesheet" href="/static/css/libary.css">
 	<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+	<link rel="stylesheet" href="../static/css/bootstrap.css">
 </head>
 <body>
 <div class="app">
@@ -46,8 +47,32 @@
 			<section class="service-section">
 				<h2>Breaking Sounds Libary</h2>
 				<div class="service-section-header">
+					<nav style="margin: 0 0 0 120px;" aria-label="Page navigation example">
+						<ul class="pagination">
+							<li class="page-item">
+								<span class="aactive poi" tabindex="-1"
+								      style="background-color: #202A3B; border-radius: 15px 0 0 15px; color: white">Previous</span>
+							</li>
+							<li class="page-item">
+								<span class="aactive poi" tabindex="1"
+								      style="background-color: #202A3B; color: white">1</span>
+							</li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; color: white">2</span></li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; color: white">3</span></li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; color: white">4</span></li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; color: white">5</span></li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; border-radius: 0 15px 15px 0; color: white">Next</span>
+							</li>
+						</ul>
+					</nav>
 					<div class="search-field">
-						<input type="text" placeholder="Searching key ..." style="color: rgb(255,188,1880);">
+						<input type="text" placeholder="Searching key ..." style="color: rgb(255,188,188);">
+						<i class="fa-solid fa-eraser fa-bounce"></i>
 					</div>
 					<button class="flat-button">
 						Search
@@ -61,17 +86,139 @@
 				</div>
 				<div class="tiles"></div>
 			</section>
+			<div class="deepit">
+				<nav style="margin: 0 0 0 120px;" aria-label="Page navigation example">
+					<ul class="pagination">
+						<li class="page-item">
+								<span class="aactive poi" tabindex="-1"
+								      style="background-color: #202A3B; border-radius: 15px 0 0 15px; color: white">Previous</span>
+						</li>
+						<li class="page-item">
+								<span class="aactive poi" tabindex="1"
+								      style="background-color: #202A3B; color: white">1</span>
+						</li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; color: white">2</span></li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; color: white">3</span></li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; color: white">4</span></li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; color: white">5</span></li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; border-radius: 0 15px 15px 0; color: white">Next</span>
+						</li>
+					</ul>
+				</nav>
+			</div>
 		</div>
 	</div>
 </div>
 <script>
 	let dataCache = [];
+	let filtered = [];
+	let amount = 1;
+	
+	document.addEventListener("DOMContentLoaded", () => {
+		let currentPage = 1;
+		const maxVisiblePages = 5;
+		
+		document.querySelectorAll(".pagination").forEach(pagination => {
+			pagination.addEventListener("click", (e) => {
+				const span = e.target.closest("span");
+				if (!span || !pagination.contains(span)) return;
+				
+				const pageText = span.innerText.trim();
+				let newPage = currentPage;
+				
+				if (pageText === "Previous") {
+					if (currentPage > 1) {
+						newPage = currentPage - 1;
+					} else return;
+				} else if (pageText === "Next") {
+					newPage = currentPage + 1;
+				} else {
+					const pageNum = parseInt(pageText);
+					if (!isNaN(pageNum)) {
+						newPage = pageNum;
+					} else return;
+				}
+				
+				const formDT = new FormData();
+				formDT.append("type", kype);
+				formDT.append("amount", newPage);
+				
+				fetch("/get_libary", {
+					method: "POST",
+					body: formDT
+				})
+					.then(response => response.json())
+					.then(data => {
+						filtered = data.data;
+						const totalPages = data.totalPages || 10; // fallback nếu backend chưa trả
+						
+						if ("amount" in data && !isNaN(data.amount)) {
+							currentPage = data.amount;
+						} else {
+							currentPage = newPage;
+						}
+						
+						handleLibraryData(filtered);
+						
+						document.querySelectorAll(".pagination").forEach(pagination => {
+							const spans = pagination.querySelectorAll("span.poi:not(:first-child):not(:last-child)");
+							
+							let startPage = 1;
+							let endPage = maxVisiblePages;
+							
+							if (totalPages <= maxVisiblePages) {
+								startPage = 1;
+								endPage = totalPages;
+							} else if (currentPage <= 3) {
+								startPage = 1;
+								endPage = 5;
+							} else if (currentPage >= totalPages - 2) {
+								startPage = totalPages - 4;
+								endPage = totalPages;
+							} else {
+								startPage = currentPage - 2;
+								endPage = currentPage + 2;
+							}
+							
+							let pageNum = startPage;
+							spans.forEach(s => {
+								s.innerText = pageNum;
+								pageNum++;
+							});
+							
+							pagination.querySelectorAll("span").forEach(s => s.classList.remove("aactive"));
+							
+							pagination.querySelectorAll("span").forEach(s => {
+								const text = s.innerText.trim();
+								if (parseInt(text) === currentPage) {
+									s.classList.add("aactive");
+								}
+								if (text === "Previous" && currentPage === 1) {
+									s.classList.add("aactive");
+								}
+							});
+						});
+					})
+					.catch(error => {
+						console.error("Lỗi khi fetch /get_libary:", error);
+					});
+			});
+		});
+	});
+	
 	document.addEventListener("DOMContentLoaded", function () {
-		let type = "all";
-		let amount = 25;
+		LoadData();
+	});
+	
+	function LoadData() {
 		const formData = new FormData();
-		formData.append("type", type);
-		formData.append("amount", amount);
+		formData.append("type", 'all');
+		formData.append("amount", 1);
 		
 		fetch("/get_libary", {
 			method: "POST",
@@ -79,13 +226,14 @@
 		})
 			.then(response => response.json())
 			.then(data => {
-				dataCache = data;
-				handleLibraryData(data);
+				dataCache = data.data;
+				filtered = dataCache;
+				handleLibraryData(dataCache);
 			})
 			.catch(error => {
 				console.error("Lỗi khi fetch /get_libary:", error);
 			});
-	});
+	}
 	
 	function handleLibraryData(data) {
 		const container = document.querySelector(".tiles, .transfers");
@@ -117,7 +265,6 @@
 		const lockIconClass = isPublic
 			? "fa-lock-open fa-beat"
 			: "fa-lock fa-shake";
-		
 		
 		article.innerHTML = `
 		${hiddenInput}
@@ -215,16 +362,31 @@
 					});
 			});
 			article.querySelector(".btn-edit").addEventListener("click", () => {
-				console.log("Edit clicked:", id);
-				// xử lý edit ở đây
+				EditSheet(item);
 			});
 			article.querySelector(".btn-share").addEventListener("click", () => {
-				console.log("Share clicked:", id);
-				// xử lý share ở đây
+				const itemType = item.Name ? "sheet" : "vocals";
+				const itemId = item._id;
+				const shareUrl = `https://127.0.0.1:3202/view_file?kind=${itemType}&item_id=${itemId}`;
+				
+				navigator.clipboard.writeText(shareUrl)
+					.then(() => {
+						const icon = article.querySelector(".btn-share");
+						if (icon) {
+							icon.classList.add("fa-shake");
+							icon.style.color = "#202A3B";
+							setTimeout(() => {
+								icon.classList.remove("fa-shake");
+								icon.style.color = "white";
+							}, 5000);
+						}
+					})
+					.catch(err => {
+						alert("Copy failed:" + err);
+					});
 			});
 			article.querySelector(".btn-delete").addEventListener("click", () => {
-				console.log("Delete clicked:", id);
-				// xử lý delete ở đây
+				Remove_DT(item);
 			});
 		}, 0);
 		
@@ -259,9 +421,9 @@
 		<div class="innoo">
 			<span class="view" id="view2">
 				<i class="fa-solid fa-eye"></i>
-				${item.view || 0}
+				${item.Views}
 			</span>
-			<span class="time" id="time2">${item.Time || "Undentify"}</span>
+			<span class="time" id="time2">${item.Time}</span>
 		</div>
 		<div class="abtn">
 			<span class="icon-button btn-lock">
@@ -338,17 +500,30 @@
 						}
 					});
 			});
-			article.querySelector(".btn-edit").addEventListener("click", () => {
-				console.log("Edit clicked:", id);
-				// xử lý edit ở đây
-			});
+			
 			article.querySelector(".btn-share").addEventListener("click", () => {
-				console.log("Share clicked:", id);
-				// xử lý share ở đây
+				const itemType = item.Name ? "sheet" : "vocal";
+				const itemId = item._id;
+				const shareUrl = `https://127.0.0.1:3202/view_file?kind=${itemType}&item_id=${itemId}`;
+				
+				navigator.clipboard.writeText(shareUrl)
+					.then(() => {
+						const icon = article.querySelector(".btn-share");
+						if (icon) {
+							icon.classList.add("fa-shake");
+							icon.style.color = "#202A3B";
+							setTimeout(() => {
+								icon.classList.remove("fa-shake");
+								icon.style.color = "white";
+							}, 5000);
+						}
+					})
+					.catch(err => {
+						alert("Copy failed:" + err);
+					});
 			});
 			article.querySelector(".btn-delete").addEventListener("click", () => {
-				console.log("Delete clicked:", id);
-				// xử lý delete ở đây
+				Remove_DT(item);
 			});
 		}, 0);
 		return article;
@@ -374,7 +549,7 @@
 			}
 			
 			// Load lại dữ liệu với kiểu hiển thị mới
-			handleLibraryData(dataCache); // dataCache là biến chứa dữ liệu đã lấy từ server
+			handleLibraryData(filtered); // dataCache là biến chứa dữ liệu đã lấy từ server
 		});
 	});
 	
@@ -401,10 +576,10 @@
 			</div>
 			<div>
 				<dt><i class="fa-solid fa-eye"></i></dt>
-				<span id="uview">${item.Views || 0}</span>
+				<span id="uview">${item.Views}</span>
 			</div>
 			<div>
-				<span id="utime">${item.Time || "Không rõ"}</span>
+				<span id="utime">${item.Time}</span>
 			</div>
 		</dl>
 		<div class="buu">
@@ -482,8 +657,104 @@
 					});
 			});
 			
+			lockBtn2.addEventListener("click", () => {
+				EditSheet(item);
+			});
+			
+			lockBtn3.addEventListener("click", () => {
+				const itemType = item.Name ? "sheet" : "vocals";
+				const itemId = item._id;
+				const shareUrl = `https://127.0.0.1:3202/view_file?kind=${itemType}&item_id=${itemId}`;
+				
+				navigator.clipboard.writeText(shareUrl)
+					.then(() => {
+						const icon = lockBtn3.querySelector("i");
+						if (icon) {
+							icon.classList.remove("fa-share");
+							icon.classList.add("fa-share", "fa-shake");
+							icon.style.color = "#6b5a75";
+							setTimeout(() => {
+								icon.classList.remove("fa-shake");
+								icon.style.color = "white";
+							}, 5000);
+						}
+					})
+					.catch(err => {
+						alert("Copy failed:" + err);
+					});
+			});
+			
+			lockBtn4.addEventListener("click", () => {
+				Remove_DT(item);
+			})
+			
 		}, 0);
 		return div;
+	}
+	
+	function EditSheet(item) {
+		const formDT = new FormData();
+		formDT.append("file_id", item._id);
+		
+		fetch("/get_xmlpath_for_edit", {
+			method: "POST",
+			body: formDT
+		})
+			.then(response => response.json())
+			.then(result => {
+				if (result.success) {
+					fetch('/edit_upload_sheet', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({musicxmlPath: result.musicxmlPath})
+					})
+						.then(response => response.json())
+						.then(data => {
+							if (data.success) {
+								window.location.href = data.redirect_url;  // Chuyển hướng nếu thành công
+							} else {
+								console.error('Error:', data.message);  // Log lỗi nếu có
+							}
+						})
+						.catch(error => {
+							console.error('Error during fetch:', error);
+						});
+				} else {
+					alert("Edit fail, please try again !");
+				}
+			})
+			.catch(error => {
+				alert("Unclue Error, please try again later !");
+			});
+	}
+	
+	function Remove_DT(item) {
+		const itemType = item.Name ? "musicxml" : "vocal";
+		const nameToShow = itemType === "vocal" ? item.filename : item.Name;
+		const confirmed = confirm(`You sure to remove '${nameToShow}'?`);
+		if (!confirmed) return;
+		
+		const formDT = new FormData();
+		formDT.append("type", itemType);
+		formDT.append("data_id", item._id);
+		
+		fetch("/delete_data", {
+			method: "POST",
+			body: formDT
+		})
+			.then(response => response.json())
+			.then(result => {
+				if (result.success) {
+					LoadData();
+				} else {
+					alert("Remove fail, please try again !");
+				}
+			})
+			.catch(error => {
+				alert("Unclue Error, please try again later !");
+			});
 	}
 	
 	function createVocalTransfer(item, type) {
@@ -496,6 +767,7 @@
 			: "fa-lock fa-shake";
 		
 		div.innerHTML = `
+		<input type="hidden" class="music-id" value="${item._id}">
 		<div class="transfer-logo">
 			<img class="transfer-img" src="${item.img_base64 ? `data:image/png;base64,${item.img_base64}` : '/static/img/me.png'}"/>
 		</div>
@@ -504,10 +776,10 @@
 			<div style="visibility: hidden"></div>
 			<div>
 				<dt><i class="fa-solid fa-eye"></i></dt>
-				<span id="uview2">${item.view || 0}</span>
+				<span id="uview2">${item.view}</span>
 			</div>
 			<div>
-				<span id="utime2">${item.Time || "Không rõ"}</span>
+				<span id="utime2">${item.Time}</span>
 			</div>
 		</dl>
 		<div class="buu">
@@ -584,10 +856,170 @@
 					});
 			});
 			
+			lockBtn3.addEventListener("click", () => {
+				const itemType = item.Name ? "sheet" : "vocal";
+				const itemId = item._id;
+				const shareUrl = `https://127.0.0.1:3202/view_file?kind=${itemType}&item_id=${itemId}`;
+				
+				navigator.clipboard.writeText(shareUrl)
+					.then(() => {
+						const icon = lockBtn3.querySelector("i");
+						if (icon) {
+							icon.classList.remove("fa-share");
+							icon.classList.add("fa-share", "fa-shake");
+							icon.style.color = "#6b5a75";
+							setTimeout(() => {
+								icon.classList.remove("fa-shake");
+								icon.style.color = "white";
+							}, 5000);
+						}
+					})
+					.catch(err => {
+						alert("Copy failed:" + err);
+					});
+			});
+			
+			lockBtn4.addEventListener("click", () => {
+				Remove_DT(item);
+			});
+			
 		}, 0);
 		
 		return div;
 	}
 </script>
+<script>
+	let kype = "all";
+	document.addEventListener("DOMContentLoaded", () => {
+		const tabs = document.querySelectorAll(".tabs span");
+		
+		tabs.forEach(tab => {
+			tab.addEventListener("click", (e) => {
+				e.preventDefault();
+				
+				tabs.forEach(t => t.classList.remove("active"));
+				tab.classList.add("active");
+				
+				const type = tab.dataset.type;
+				
+				if (type === "vocal") {
+					kype = "vocal";
+				} else if (type === "sheet") {
+					kype = "musicxml";
+				} else {
+					kype = "all";
+					document.querySelector(".search-field input").value = "";
+					document.querySelector(".search-field .fa-eraser").style.display = "none";
+					renderFilteredItems(dataCache);
+					return
+				}
+				
+				const asdf = new FormData();
+				asdf.append("type", kype);
+				asdf.append("amount", 1);    // gửi keyword lên server
+				
+				fetch("/get_libary", {
+					method: "POST",
+					body: asdf
+				})
+					.then(response => response.json())
+					.then(data => {
+						filtered = data.data;
+						renderFilteredItems(filtered);
+					})
+					.catch(error => {
+						console.error("Lỗi khi fetch dữ liệu tìm kiếm:", error);
+					});
+				
+			});
+		});
+	});
+	
+	function renderFilteredItems(items) {
+		const container = document.querySelector(".tiles, .transfers");
+		container.innerHTML = "";
+		
+		items.forEach(item => {
+			if (currentMode === "tiles") {
+				if (item.type === "musicxml") {
+					container.appendChild(createMusicXMLTile(item, item.type));
+				} else if (item.type === "vocal") {
+					container.appendChild(createVocalTile(item, item.type));
+				}
+			} else if (currentMode === "transfers") {
+				if (item.type === "musicxml") {
+					container.appendChild(createMusicXMLTransfer(item, item.type));
+				} else if (item.type === "vocal") {
+					container.appendChild(createVocalTransfer(item, item.type));
+				}
+			}
+		});
+	}
+</script>
+<script>
+	document.addEventListener("DOMContentLoaded", () => {
+		const searchInput = document.querySelector(".search-field input");
+		const clearIcon = document.querySelector(".search-field .fa-eraser");
+		const searchButton = document.querySelector(".flat-button");
+		
+		searchInput.addEventListener("input", () => {
+			if (searchInput.value.trim() !== "") {
+				clearIcon.style.display = "flex";
+			} else {
+				clearIcon.style.display = "none";
+			}
+		});
+		
+		clearIcon.addEventListener("click", () => {
+			searchInput.value = "";
+			clearIcon.style.display = "none";
+			filtered = dataCache;
+			
+			const pagination = document.querySelector(".pagination");
+			const spans = pagination.querySelectorAll("span");
+			spans.forEach(s => s.classList.remove("aactive"));
+			
+			spans.forEach((s, index) => {
+				const text = s.innerText.trim();
+				
+				if (parseInt(text) === 1 || text === "Previous") {
+					s.classList.add("aactive");
+				}
+			});
+			renderFilteredItems(dataCache);
+		});
+		
+		searchInput.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") handleSearch();
+		});
+		searchButton.addEventListener("click", handleSearch);
+		
+		function handleSearch() {
+			const keyword = searchInput.value.trim().toLowerCase();
+			
+			const formData = new FormData();
+			formData.append("type", kype);
+			formData.append("amount", 1);
+			formData.append("keyword", keyword);     // gửi keyword lên server
+			
+			fetch("/get_libary", {
+				method: "POST",
+				body: formData
+			})
+				.then(response => response.json())
+				.then(data => {
+					filtered = data.data;  // cập nhật lại cache nếu cần
+					renderFilteredItems(filtered);  // hiển thị data đã lọc từ server
+				})
+				.catch(error => {
+					console.error("Lỗi khi fetch dữ liệu tìm kiếm:", error);
+				});
+		}
+		
+		clearIcon.style.display = "none";
+	});
+</script>
 </body>
 </html>
+
+{% include 'support/footer.html' %}
