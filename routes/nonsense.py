@@ -121,21 +121,24 @@ def save_musicxml():
 
 		musicxml = data.get('musicxml')
 		userid = session.get("user_id")
+		item_id = data.get("item_id")
+
 		name = data.get('name', session.get("musicxml_name"))
 		if name is None:
 			name = data.get('content')
-
-		ispublic = False
 
 		if not musicxml or not userid:
 			return jsonify({"message": "Thiếu dữ liệu musicxml hoặc userid"}), 400
 
 		musicxml_binary = Binary(musicxml.encode('utf-8'))
 
-		insert_id = insert_musicxml(userid=userid, musicxml=musicxml_binary, ispublic=ispublic, name=name)
+		if item_id:
+			load = update_musicxml(item_id, musicxml=musicxml_binary)
+		else:
+			load = insert_musicxml(userid=userid, musicxml=musicxml_binary, name=name)
 
-		if insert_id:
-			return jsonify({"message": "Save at library !", "id": insert_id}), 200
+		if load:
+			return jsonify({"message": "Save at library !", "id": load}), 200
 		else:
 			return jsonify({"message": "Error, please try again !"}), 500
 
@@ -369,3 +372,42 @@ def get_xmlpath_for_edit():
 	except Exception as e:
 		print(f"[Get XML Path Error] {e}")
 		return jsonify({"success": False, "message": str(e)}), 500
+
+
+@non.route("/play_vocal", methods=["POST"])
+def finish_edit_sheet():
+	if "user_id" not in session:
+		flash("Session time out, please login to continue !")
+		return redirect(url_for("loginbase"))
+
+	item_id = request.args.get("item_id")
+	name = request.args.get("filename")
+
+	user_id = session.get("user_id")
+
+	try:
+		file_path = os.path.join(DATA_LOGS_DIR, user_id, "local_voice", name, name+".mp3")
+		if not os.path.exists(file_path):
+			item = get_file_by_kind_and_id("vocal", item_id)
+			filename = item["filename"]
+			subfolder = os.path.splitext(filename)[0]
+			save_dir = os.path.join(DATA_LOGS_DIR, user_id, "local_voice", subfolder)
+			file_bytes = item["data"]
+
+			os.makedirs(save_dir, exist_ok=True)
+			file_path = os.path.join(save_dir, filename)
+
+			with open(file_path, "wb") as f:
+				f.write(file_bytes)
+
+			file_path = os.path.join("static/Users", user_id, "local_voice", subfolder, filename)
+		else:
+			file_path = os.path.join("static/Users", user_id, "local_voice", name, name+".mp3")
+
+		return jsonify(file_path), 200
+
+	except Exception as e:
+		print(f"[Save File Error] {e}")
+		return jsonify({"success": False, "message": "Lỗi khi xem file."}), 500
+
+

@@ -86,6 +86,7 @@
 				</div>
 				<div class="tiles"></div>
 			</section>
+			<audio id="audio_player" controls style="visibility: hidden"></audio>
 			<div class="deepit">
 				<nav style="margin: 0 0 0 120px;" aria-label="Page navigation example">
 					<ul class="pagination">
@@ -118,6 +119,12 @@
 	let dataCache = [];
 	let filtered = [];
 	let amount = 1;
+	
+	const audioPlayer = document.getElementById("audio_player");
+	audioPlayer.volume = 0.7;
+	let present = "";
+	let isPlaying = false;
+	let fileLoaded = false;
 	
 	document.addEventListener("DOMContentLoaded", () => {
 		let currentPage = 1;
@@ -429,6 +436,9 @@
 			<span class="icon-button btn-lock">
 				<i class="fa-solid ${lockIconClass}"></i>
 			</span>
+			<span class="icon-button btn-play">
+				<i class="fa-solid fa-play"></i>
+			</span>
 			<span class="icon-button btn-share">
 				<i class="fa-solid fa-share"></i>
 			</span>
@@ -439,6 +449,8 @@
 		`;
 		setTimeout(() => {
 			const id = article.querySelector(".item-id").value;
+			const playButton = article.querySelector(".btn-play");
+			const icon = playButton.querySelector("i");
 			
 			article.querySelector(".btn-lock").addEventListener("click", () => {
 				const icon = article.querySelector(".btn-lock i");
@@ -500,7 +512,9 @@
 						}
 					});
 			});
-			
+			article.querySelector(".btn-play").addEventListener("click", async () => {
+				await PlayTrack(item, icon);
+			});
 			article.querySelector(".btn-share").addEventListener("click", () => {
 				const itemType = item.Name ? "sheet" : "vocal";
 				const itemId = item._id;
@@ -692,6 +706,44 @@
 		return div;
 	}
 	
+	async function PlayTrack(item, icon) {
+		if (present !== item._id) {
+			fileLoaded = false;
+			isPlaying = false;
+			audioPlayer.pause();
+			audioPlayer.currentTime = 0;
+			document.querySelectorAll("i.fa-stop").forEach(icon => {
+				icon.classList.remove("fa-stop");
+				icon.classList.add("fa-play");
+			});
+		}
+		if (!isPlaying) {
+			if (!fileLoaded) {
+				try {
+					const res = await fetch(`/play_vocal?item_id=${item._id}&filename=${item.filename}`, {
+						method: "POST"
+					});
+					audioPlayer.src = await res.json();
+					present = item._id;
+					fileLoaded = true;
+				} catch (err) {
+					console.error("Lỗi khi tải file:", err);
+					return;
+				}
+			}
+			
+			audioPlayer.play();
+			icon.classList.remove("fa-play");
+			icon.classList.add("fa-stop");
+			isPlaying = true;
+		} else {
+			audioPlayer.pause();
+			icon.classList.remove("fa-stop");
+			icon.classList.add("fa-play");
+			isPlaying = false;
+		}
+	}
+	
 	function EditSheet(item) {
 		const formDT = new FormData();
 		formDT.append("file_id", item._id);
@@ -703,6 +755,7 @@
 			.then(response => response.json())
 			.then(result => {
 				if (result.success) {
+					sessionStorage.setItem("exist_id", item._id);
 					fetch('/edit_upload_sheet', {
 						method: 'POST',
 						headers: {
@@ -776,15 +829,15 @@
 			<div style="visibility: hidden"></div>
 			<div>
 				<dt><i class="fa-solid fa-eye"></i></dt>
-				<span id="uview2">${item.view}</span>
+				<span id="uview2">${item.Views}</span>
 			</div>
 			<div>
 				<span id="utime2">${item.Time}</span>
 			</div>
 		</dl>
 		<div class="buu">
-			<span class="icon-button" style="visibility: hidden"><i class="fa-solid fa-pencil"></i></span>
 			<span class="icon-button"><i class="fa-solid ${lockIconClass}"></i></span>
+			<span class="icon-button btn-play"><i class="fa-solid fa-play"></i></span>
 			<span class="icon-button"><i class="fa-solid fa-share"></i></span>
 			<span class="icon-button"><i class="fa-solid fa-trash-can"></i></span>
 		</div>
@@ -792,13 +845,15 @@
 		
 		setTimeout(() => {
 			const id = div.querySelector(".music-id")?.value;
+			const lockBtn1 = div.querySelector(".buu .icon-button:nth-child(1)");
 			const lockBtn2 = div.querySelector(".buu .icon-button:nth-child(2)");
 			const lockBtn3 = div.querySelector(".buu .icon-button:nth-child(3)");
 			const lockBtn4 = div.querySelector(".buu .icon-button:nth-child(4)");
-			if (!lockBtn2 || !id) return;
 			
-			lockBtn2.addEventListener("click", () => {
-				const icon = lockBtn2.querySelector("i");
+			const icon = lockBtn2.querySelector("i");
+			
+			lockBtn1.addEventListener("click", () => {
+				const icon = lockBtn1.querySelector("i");
 				const isLocked = icon.classList.contains("fa-lock");
 				
 				const status = isLocked ? "unlock" : "lock";
@@ -856,6 +911,10 @@
 					});
 			});
 			
+			lockBtn2.addEventListener("click", () => {
+				PlayTrack(item, icon);
+			});
+			
 			lockBtn3.addEventListener("click", () => {
 				const itemType = item.Name ? "sheet" : "vocal";
 				const itemId = item._id;
@@ -887,6 +946,45 @@
 		
 		return div;
 	}
+	
+	document.addEventListener("keydown", function (event) {
+		if (!audioPlayer.src) return; // Nếu chưa có file, bỏ qua
+		
+		switch (event.key) {
+			case "ArrowLeft": // Tua lùi 15s
+				audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 15);
+				break;
+			case "ArrowRight": // Tua tới 15s
+				audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 15);
+				break;
+			case " ": // Phát / Dừng khi nhấn Space
+				event.preventDefault(); // Ngăn trang web cuộn khi nhấn Space
+				if (audioPlayer.paused) {
+					audioPlayer.play();
+				} else {
+					audioPlayer.pause();
+				}
+				break;
+			case "m": // Tắt / Bật âm thanh khi nhấn "m"
+				audioPlayer.muted = !audioPlayer.muted;
+				break;
+			case "ArrowUp": // Tăng âm lượng
+				audioPlayer.volume = Math.min(1, audioPlayer.volume + 0.1);
+				break;
+			case "ArrowDown": // Giảm âm lượng
+				audioPlayer.volume = Math.max(0, audioPlayer.volume - 0.1);
+				break;
+		}
+	});
+	
+	audioPlayer.addEventListener("ended", () => {
+		isPlaying = false;
+		
+		document.querySelectorAll("i.fa-stop").forEach(icon => {
+			icon.classList.remove("fa-stop");
+			icon.classList.add("fa-play");
+		});
+	});
 </script>
 <script>
 	let kype = "all";
