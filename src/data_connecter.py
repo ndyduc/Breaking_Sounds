@@ -186,6 +186,18 @@ def count_user_data(user_id: str, kind: str) -> int:
 		)
 
 
+def count_public_data(kind: str) -> int:
+	if kind == "musicxml":
+		return Sheet.count_documents({"IsPublic": True})
+	elif kind == "vocal":
+		return Vocals.count_documents({"IsPublic": True})
+	else:
+		return (
+			Sheet.count_documents({"IsPublic": True}) +
+			Vocals.count_documents({"IsPublic": True})
+		)
+
+
 def remove_data(data_id, kind):
 	try:
 		collection = None
@@ -337,6 +349,174 @@ def get_all_user_data(userid, kind, limit, index, keyword=None):
 	except Exception as e:
 		print(f"[Get All User Data Error] {e}")
 		return None
+
+
+def get_all_public_data(kind, limit=20, index=1, keyword=None):
+	try:
+		amount_data = count_public_data(kind)
+		if ((index - 1) * limit) + 1 > amount_data:
+			index = amount_data // limit if amount_data % limit == 0 else amount_data // limit + 1
+
+		regex = {"$regex": keyword.lower(), "$options": "i"} if keyword else None
+
+		def process_extra(item):
+			if item["type"] == "vocal":
+				item["filename"] = item.get("filename", "")[:-4]
+				if "img" in item:
+					item["img_base64"] = base64.b64encode(item["img"]).decode("utf-8")
+					del item["img"]
+			item["_id"] = str(item["_id"])
+			item["user_id"] = str(item["user_id"])
+			return item
+
+		# ==== MUSICXML ONLY ====
+		if kind == "musicxml":
+			match_stage = {"IsPublic": True}
+			if regex:
+				match_stage["$or"] = [
+					{"Instrument": regex},
+					{"Name": regex},
+					{"Time": regex}
+				]
+			pipeline = [
+				{"$match": match_stage},
+				{"$lookup": {
+					"from": "Users",
+					"localField": "user_id",
+					"foreignField": "_id",
+					"as": "user_info"
+				}},
+				{"$unwind": "$user_info"},
+				{"$project": {
+					"type": {"$literal": "musicxml"},
+					"IsPublic": 1,
+					"Instrument": 1,
+					"Time": 1,
+					"Name": 1,
+					"Views": 1,
+					"user_id": 1,
+					"username": "$user_info.Username",
+					"_id": 1
+				}},
+				{"$sort": {"Time": -1}},
+				{"$skip": (index - 1) * limit},
+				{"$limit": limit}
+			]
+			result = Sheet.aggregate(pipeline)
+
+		# ==== VOCAL ONLY ====
+		elif kind == "vocal":
+			match_stage = {"IsPublic": True}
+			if regex:
+				match_stage["$or"] = [
+					{"filename": regex},
+					{"Time": regex}
+				]
+			pipeline = [
+				{"$match": match_stage},
+				{"$lookup": {
+					"from": "Users",
+					"localField": "user_id",
+					"foreignField": "_id",
+					"as": "user_info"
+				}},
+				{"$unwind": "$user_info"},
+				{"$project": {
+					"type": {"$literal": "vocal"},
+					"IsPublic": 1,
+					"filename": 1,
+					"Time": 1,
+					"Views": 1,
+					"user_id": 1,
+					"username": "$user_info.Username",
+					"img": 1,
+					"_id": 1
+				}},
+				{"$sort": {"Time": -1}},
+				{"$skip": (index - 1) * limit},
+				{"$limit": limit}
+			]
+			result = Vocals.aggregate(pipeline)
+
+		# ==== ALL (MERGE 2 LOẠI) ====
+		else:
+			music_match = {"IsPublic": True}
+			vocal_match = {"IsPublic": True}
+			if regex:
+				music_match["$or"] = [
+					{"Instrument": regex},
+					{"Name": regex},
+					{"Time": regex}
+				]
+				vocal_match["$or"] = [
+					{"filename": regex},
+					{"Time": regex}
+				]
+
+			pipeline = [
+				# Sheet
+				{"$match": music_match},
+				{"$project": {
+					"type": {"$literal": "musicxml"},
+					"IsPublic": 1,
+					"Instrument": 1,
+					"Time": 1,
+					"Name": 1,
+					"Views": 1,
+					"user_id": 1,
+					"_id": 1
+				}},
+				# Union Vocal
+				{"$unionWith": {
+					"coll": "Vocals",
+					"pipeline": [
+						{"$match": vocal_match},
+						{"$project": {
+							"type": {"$literal": "vocal"},
+							"IsPublic": 1,
+							"filename": 1,
+							"Time": 1,
+							"Views": 1,
+							"user_id": 1,
+							"img": 1,
+							"_id": 1
+						}}
+					]
+				}},
+				# Join user
+				{"$lookup": {
+					"from": "Users",
+					"localField": "user_id",
+					"foreignField": "_id",
+					"as": "user_info"
+				}},
+				{"$unwind": "$user_info"},
+				{"$project": {
+					"type": 1,
+					"IsPublic": 1,
+					"Time": 1,
+					"Views": 1,
+					"user_id": 1,
+					"username": "$user_info.Username",
+					"Instrument": 1,
+					"Name": 1,
+					"filename": 1,
+					"img": 1,
+					"_id": 1
+				}},
+				{"$sort": {"Time": -1}},
+				{"$skip": (index - 1) * limit},
+				{"$limit": limit}
+			]
+
+			result = Sheet.aggregate(pipeline)
+
+		final_data = [process_extra(item) for item in result]
+		return final_data, index
+
+	except Exception as e:
+		print(f"[Get All Public Data Error] {e}")
+		return [], index
 
 
 def get_file_by_kind_and_id(kind, item_id):

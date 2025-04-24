@@ -181,8 +181,6 @@ def predict_notes(wav_path, model, device="cpu", sr=44100, hop_length=512, windo
 
 
 def CNN_predict(wav_path, model, device="cpu", sr=44100, hop_length=512, window_size=64, step=21):
-    print(f"\nĐang dự đoán file: {wav_path}")
-
     y, sr = librosa.load(wav_path, sr=sr)
 
     mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, hop_length=hop_length)

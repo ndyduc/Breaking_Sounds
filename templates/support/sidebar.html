@@ -30,8 +30,8 @@
 		<hr/>
 		<div class="nav-button"><i class="fas fa-archway"></i><span>Libary</span></div>
 		<div class="nav-button"><i class="fas fa-newspaper"></i><span>Sheet Editor</span></div>
-		<div class="nav-button"><i class="fas fa-thumbtack"></i><span>Pinned Items</span></div>
 		<div class="nav-button"><i class="fas fa-guitar"></i><span>Practice</span></div>
+		<div class="nav-button"><i class="fas fa-moon"></i><span>Take a break</span></div>
 		<hr/>
 		<div id="nav-content-highlight"></div>
 	</div>
@@ -67,7 +67,7 @@
 			"/libary",
 			"/sheet_editor",
 			"/practice",
-			"/spark"
+			"/rest"
 		];
 		
 		button.setAttribute("data-link", paths[index]);
@@ -145,9 +145,9 @@
 	});
 </script>
 <script>
-	let userName = "{{ session.get('name', '') }}";
-	let userPicture = "{{ session.get('picture', '') }}";
-	let email = "{{ session.get('email', '' ) }}";
+	let userName = "{{ session.get('name') }}";
+	let userPicture = "{{ session.get('picture', '/static/img/idga.png') }}";
+	let email = "{{ session.get('email') }}";
 	
 	if (userName) {
 		document.getElementById("nav-footer-title").textContent = userName;

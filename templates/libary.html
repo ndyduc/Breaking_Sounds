@@ -13,6 +13,52 @@
 	<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 	<link rel="stylesheet" href="../static/css/bootstrap.css">
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			let defaultIndex = 4; // Mục mặc định
+			let defaultNavButton = document.querySelector(`.nav-button:nth-of-type(${defaultIndex})`);
+			let highlight = document.getElementById("nav-content-highlight");
+			
+			if (defaultNavButton) {
+				let defaultTop = defaultNavButton.offsetTop + "px";
+				highlight.style.top = defaultTop;
+				highlight.dataset.defaultTop = defaultTop; // Lưu vị trí mặc định
+				
+				// Đặt màu cho mục mặc định
+				defaultNavButton.classList.add("active");
+				defaultNavButton.style.color = "var(--navbar-dark-primary)";
+			}
+			
+			document.querySelectorAll(".nav-button").forEach((button) => {
+				button.addEventListener("mouseenter", function () {
+					highlight.style.top = button.offsetTop + "px";
+					resetColors();
+					
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-dark-primary)"; // Mục được hover
+						defaultNavButton.style.color = "var(--navbar-light-secondary)"; // Đổi màu mặc định
+					}
+				});
+				
+				button.addEventListener("mouseleave", function () {
+					resetColors();
+					highlight.style.top = highlight.dataset.defaultTop; // Trả về vị trí mặc định
+					
+					// Nếu rời khỏi mục khác, khôi phục màu mục mặc định
+					defaultNavButton.style.color = "var(--navbar-dark-primary)";
+				});
+			});
+			
+			function resetColors() {
+				document.querySelectorAll(".nav-button").forEach(button => {
+					button.classList.remove("active");
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-light-secondary)"; // Đặt lại màu khi không phải mặc định
+					}
+				});
+			}
+		});
+	</script>
 </head>
 <body>
 <div class="app">
@@ -35,17 +81,22 @@
 				</button>
 			</div>
 		</div>
-		<div class="app-header-mobile">
-			<button class="icon-button large">
-				<i class="ph-list"></i>
-			</button>
+		<div class="app-header-public">
+			<div class="abcxyz">
+				<button class="icon-button large btn_active">
+					<i class="fas fa-user-large"></i>
+				</button>
+				<button class="icon-button large">
+					<i class="fas fa-user-group"></i>
+				</button>
+			</div>
 		</div>
 	
 	</header>
 	<div class="app-body">
 		<div class="app-body-main-content" style="padding-left: 50px;">
 			<section class="service-section">
-				<h2>Breaking Sounds Libary</h2>
+				<h2 id="titt">Breaking Sounds Libary</h2>
 				<div class="service-section-header">
 					<nav style="margin: 0 0 0 120px;" aria-label="Page navigation example">
 						<ul class="pagination">
@@ -117,6 +168,8 @@
 </div>
 <script>
 	let dataCache = [];
+	let dataPublic = [];
+	let filteredPublic = [];
 	let filtered = [];
 	let amount = 1;
 	
@@ -125,11 +178,14 @@
 	let present = "";
 	let isPlaying = false;
 	let fileLoaded = false;
+	let ispublic = false;
+	
+	let currentPage = 1;
+	const maxVisiblePages = 5;
+	
+	sessionStorage.removeItem("exist_id");
 	
 	document.addEventListener("DOMContentLoaded", () => {
-		let currentPage = 1;
-		const maxVisiblePages = 5;
-		
 		document.querySelectorAll(".pagination").forEach(pagination => {
 			pagination.addEventListener("click", (e) => {
 				const span = e.target.closest("span");
@@ -154,6 +210,7 @@
 				const formDT = new FormData();
 				formDT.append("type", kype);
 				formDT.append("amount", newPage);
+				formDT.append("public", ispublic);
 				
 				fetch("/get_libary", {
 					method: "POST",
@@ -161,7 +218,11 @@
 				})
 					.then(response => response.json())
 					.then(data => {
-						filtered = data.data;
+						if (!ispublic) {
+							filtered = data.data;
+						} else {
+							filteredPublic = data.data;
+						}
 						const totalPages = data.totalPages || 10; // fallback nếu backend chưa trả
 						
 						if ("amount" in data && !isNaN(data.amount)) {
@@ -170,7 +231,7 @@
 							currentPage = newPage;
 						}
 						
-						handleLibraryData(filtered);
+						handleLibraryData(data.data);
 						
 						document.querySelectorAll(".pagination").forEach(pagination => {
 							const spans = pagination.querySelectorAll("span.poi:not(:first-child):not(:last-child)");
@@ -216,6 +277,33 @@
 					});
 			});
 		});
+		
+		const buttons = document.querySelectorAll('.abcxyz .icon-button');
+		const button1 = buttons[0];
+		const button2 = buttons[1];
+		
+		button2.addEventListener('click', () => {
+			ispublic = true;
+			
+			document.getElementById("titt").textContent = "Breaking Sounds Public"
+			button1.classList.remove('btn_active');
+			button2.classList.add('btn_active');
+			LoadData();
+			handleLibraryData(filteredPublic);
+			updatePagination();
+			active_all();
+		});
+		
+		button1.addEventListener('click', () => {
+			ispublic = false;
+			
+			document.getElementById("titt").textContent = "Breaking Sounds Library"
+			button2.classList.remove('btn_active');
+			button1.classList.add('btn_active');
+			handleLibraryData(filtered);
+			updatePagination();
+			active_all()
+		});
 	});
 	
 	document.addEventListener("DOMContentLoaded", function () {
@@ -226,6 +314,7 @@
 		const formData = new FormData();
 		formData.append("type", 'all');
 		formData.append("amount", 1);
+		formData.append("public", ispublic)
 		
 		fetch("/get_libary", {
 			method: "POST",
@@ -233,9 +322,14 @@
 		})
 			.then(response => response.json())
 			.then(data => {
-				dataCache = data.data;
-				filtered = dataCache;
-				handleLibraryData(dataCache);
+				if (!ispublic) {
+					dataCache = data.data;
+					filtered = dataCache;
+				} else {
+					dataPublic = data.data;
+					filteredPublic = dataPublic;
+				}
+				handleLibraryData(data.data);
 			})
 			.catch(error => {
 				console.error("Lỗi khi fetch /get_libary:", error);
@@ -285,22 +379,31 @@
 				<i class="fa-solid fa-eye"></i>
 				${item.Views || 0}
 			</span>
-			<span class="instrument">${item.Instrument || "Undentify"}</span>
-			<span class="time">${item.Time || "Không rõ"}</span>
+			<span class="instrument">${item.Instrument}</span>
+			<span class="time">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>`+"  "+item.username}</span>
 		</div>
-		<div class="abtn">
-			<span class="icon-button btn-lock">
-				<i class="fa-solid ${lockIconClass}"></i>
-			</span>
-			<span class="icon-button btn-edit">
-				<i class="fa-solid fa-pencil"></i>
-			</span>
-			<span class="icon-button btn-share">
-				<i class="fa-solid fa-share"></i>
-			</span>
-			<span class="icon-button btn-delete">
-				<i class="fa-solid fa-trash-can"></i>
-			</span>
+		<div class="abtn" class="abtn" ${ispublic ? `style="padding-left: 120px;"` : ``}>
+			${!ispublic ? `
+				<span class="icon-button btn-lock">
+					<i class="fa-solid ${lockIconClass}"></i>
+				</span>
+				<span class="icon-button btn-edit">
+					<i class="fa-solid fa-pencil"></i>
+				</span>
+				<span class="icon-button btn-share">
+					<i class="fa-solid fa-share"></i>
+				</span>
+				<span class="icon-button btn-delete">
+					<i class="fa-solid fa-trash-can"></i>
+				</span>
+			` : `
+				<span class="icon-button btn-open">
+					<i class="fa-solid fa-folder-open"></i>
+				</span>
+				<span class="icon-button btn-share">
+					<i class="fa-solid fa-share"></i>
+				</span>
+			`}
 		</div>
 		`;
 		
@@ -308,69 +411,6 @@
 		setTimeout(() => {
 			const id = article.querySelector(".item-id").value;
 			
-			article.querySelector(".btn-lock").addEventListener("click", () => {
-				const icon = article.querySelector(".btn-lock i");
-				const isLocked = icon.classList.contains("fa-lock");
-				
-				// Chuyển trạng thái trước (optimistic update)
-				if (isLocked) {
-					icon.classList.remove("fa-lock", "fa-shake");
-					icon.classList.add("fa-lock-open", "fa-beat");
-				} else {
-					icon.classList.remove("fa-lock-open", "fa-beat");
-					icon.classList.add("fa-lock", "fa-shake");
-				}
-				
-				const newStatus = isLocked ? "unlock" : "lock";
-				
-				fetch("/unlock_file", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json"
-					},
-					body: JSON.stringify({
-						_id: id,
-						status: newStatus,
-						type: type
-					})
-				})
-					.then(res => res.json())
-					.then(data => {
-						if (!data.success) {
-							alert((isLocked ? "Không thể mở khóa: " : "Không thể khóa: ") + (data.message || "Lỗi không xác định"));
-							
-							// Trả lại icon về trạng thái ban đầu nếu fail
-							if (isLocked) {
-								icon.classList.remove("fa-lock-open", "fa-beat");
-								icon.classList.add("fa-lock", "fa-shake");
-							} else {
-								icon.classList.remove("fa-lock", "fa-shake");
-								icon.classList.add("fa-lock-open", "fa-beat");
-							}
-						} else {
-							const itemInCache = dataCache.find(i => i._id === id);
-							if (itemInCache) {
-								itemInCache.IsPublic = status === "unlock";
-							}
-						}
-					})
-					.catch(error => {
-						console.error("Lỗi kết nối:", error);
-						alert("Disconnect to server, please try again later !");
-						
-						// Trả lại icon về trạng thái ban đầu
-						if (isLocked) {
-							icon.classList.remove("fa-lock-open", "fa-beat");
-							icon.classList.add("fa-lock", "fa-shake");
-						} else {
-							icon.classList.remove("fa-lock", "fa-shake");
-							icon.classList.add("fa-lock-open", "fa-beat");
-						}
-					});
-			});
-			article.querySelector(".btn-edit").addEventListener("click", () => {
-				EditSheet(item);
-			});
 			article.querySelector(".btn-share").addEventListener("click", () => {
 				const itemType = item.Name ? "sheet" : "vocals";
 				const itemId = item._id;
@@ -381,7 +421,7 @@
 						const icon = article.querySelector(".btn-share");
 						if (icon) {
 							icon.classList.add("fa-shake");
-							icon.style.color = "#202A3B";
+							icon.style.color = "rgb(154, 255, 178)";
 							setTimeout(() => {
 								icon.classList.remove("fa-shake");
 								icon.style.color = "white";
@@ -392,9 +432,79 @@
 						alert("Copy failed:" + err);
 					});
 			});
-			article.querySelector(".btn-delete").addEventListener("click", () => {
-				Remove_DT(item);
-			});
+			
+			if (!ispublic) {
+				article.querySelector(".btn-lock").addEventListener("click", () => {
+					const icon = article.querySelector(".btn-lock i");
+					const isLocked = icon.classList.contains("fa-lock");
+					
+					// Chuyển trạng thái trước (optimistic update)
+					if (isLocked) {
+						icon.classList.remove("fa-lock", "fa-shake");
+						icon.classList.add("fa-lock-open", "fa-beat");
+					} else {
+						icon.classList.remove("fa-lock-open", "fa-beat");
+						icon.classList.add("fa-lock", "fa-shake");
+					}
+					
+					const newStatus = isLocked ? "unlock" : "lock";
+					
+					fetch("/unlock_file", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							_id: id,
+							status: newStatus,
+							type: type
+						})
+					})
+						.then(res => res.json())
+						.then(data => {
+							if (!data.success) {
+								alert((isLocked ? "Không thể mở khóa: " : "Không thể khóa: ") + (data.message || "Lỗi không xác định"));
+								
+								// Trả lại icon về trạng thái ban đầu nếu fail
+								if (isLocked) {
+									icon.classList.remove("fa-lock-open", "fa-beat");
+									icon.classList.add("fa-lock", "fa-shake");
+								} else {
+									icon.classList.remove("fa-lock", "fa-shake");
+									icon.classList.add("fa-lock-open", "fa-beat");
+								}
+							} else {
+								const itemInCache = dataCache.find(i => i._id === id);
+								if (itemInCache) {
+									itemInCache.IsPublic = status === "unlock";
+								}
+							}
+						})
+						.catch(error => {
+							console.error("Lỗi kết nối:", error);
+							alert("Disconnect to server, please try again later !");
+							
+							// Trả lại icon về trạng thái ban đầu
+							if (isLocked) {
+								icon.classList.remove("fa-lock-open", "fa-beat");
+								icon.classList.add("fa-lock", "fa-shake");
+							} else {
+								icon.classList.remove("fa-lock", "fa-shake");
+								icon.classList.add("fa-lock-open", "fa-beat");
+							}
+						});
+				});
+				article.querySelector(".btn-edit").addEventListener("click", () => {
+					EditSheet(item);
+				});
+				article.querySelector(".btn-delete").addEventListener("click", () => {
+					Remove_DT(item);
+				});
+			} else {
+				article.querySelector(".btn-open").addEventListener("click", async () => {
+					Popupfile(item);
+				});
+			}
 		}, 0);
 		
 		return article;
@@ -430,9 +540,10 @@
 				<i class="fa-solid fa-eye"></i>
 				${item.Views}
 			</span>
-			<span class="time" id="time2">${item.Time}</span>
+			<span class="time" id="time2">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>`+"  "+item.username}</span>
 		</div>
-		<div class="abtn">
+		<div class="abtn" ${ispublic ? `style="padding-left: 120px;"` : ``}>
+			${!ispublic ? `
 			<span class="icon-button btn-lock">
 				<i class="fa-solid ${lockIconClass}"></i>
 			</span>
@@ -445,76 +556,17 @@
 			<span class="icon-button btn-delete">
 				<i class="fa-solid fa-trash-can"></i>
 			</span>
+			` : `
+			<span class="icon-button btn-open">
+				<i class="fa-solid fa-folder-open"></i>
+			</span>
+			<span class="icon-button btn-share">
+				<i class="fa-solid fa-share"></i>
+			</span>
+			`}
 		</div>
 		`;
 		setTimeout(() => {
-			const id = article.querySelector(".item-id").value;
-			const playButton = article.querySelector(".btn-play");
-			const icon = playButton.querySelector("i");
-			
-			article.querySelector(".btn-lock").addEventListener("click", () => {
-				const icon = article.querySelector(".btn-lock i");
-				const isLocked = icon.classList.contains("fa-lock");
-				
-				// Chuyển trạng thái trước (optimistic update)
-				if (isLocked) {
-					icon.classList.remove("fa-lock", "fa-shake");
-					icon.classList.add("fa-lock-open", "fa-beat");
-				} else {
-					icon.classList.remove("fa-lock-open", "fa-beat");
-					icon.classList.add("fa-lock", "fa-shake");
-				}
-				
-				const newStatus = isLocked ? "unlock" : "lock";
-				
-				fetch("/unlock_file", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json"
-					},
-					body: JSON.stringify({
-						_id: id,
-						status: newStatus,
-						type: type
-					})
-				})
-					.then(res => res.json())
-					.then(data => {
-						if (!data.success) {
-							alert((isLocked ? "Không thể mở khóa: " : "Không thể khóa: ") + (data.message || "Lỗi không xác định"));
-							
-							// Trả lại icon về trạng thái ban đầu nếu fail
-							if (isLocked) {
-								icon.classList.remove("fa-lock-open", "fa-beat");
-								icon.classList.add("fa-lock", "fa-shake");
-							} else {
-								icon.classList.remove("fa-lock", "fa-shake");
-								icon.classList.add("fa-lock-open", "fa-beat");
-							}
-						} else {
-							const itemInCache = dataCache.find(i => i._id === id);
-							if (itemInCache) {
-								itemInCache.IsPublic = newStatus === "unlock";
-							}
-						}
-					})
-					.catch(error => {
-						console.error("Lỗi kết nối:", error);
-						alert("Disconnect to server, please try again later !");
-						
-						// Trả lại icon về trạng thái ban đầu
-						if (isLocked) {
-							icon.classList.remove("fa-lock-open", "fa-beat");
-							icon.classList.add("fa-lock", "fa-shake");
-						} else {
-							icon.classList.remove("fa-lock", "fa-shake");
-							icon.classList.add("fa-lock-open", "fa-beat");
-						}
-					});
-			});
-			article.querySelector(".btn-play").addEventListener("click", async () => {
-				await PlayTrack(item, icon);
-			});
 			article.querySelector(".btn-share").addEventListener("click", () => {
 				const itemType = item.Name ? "sheet" : "vocal";
 				const itemId = item._id;
@@ -525,7 +577,7 @@
 						const icon = article.querySelector(".btn-share");
 						if (icon) {
 							icon.classList.add("fa-shake");
-							icon.style.color = "#202A3B";
+							icon.style.color = "rgb(154, 255, 178)";
 							setTimeout(() => {
 								icon.classList.remove("fa-shake");
 								icon.style.color = "white";
@@ -536,34 +588,103 @@
 						alert("Copy failed:" + err);
 					});
 			});
-			article.querySelector(".btn-delete").addEventListener("click", () => {
-				Remove_DT(item);
-			});
+			if (!ispublic) {
+				const id = article.querySelector(".item-id").value;
+				const playButton = article.querySelector(".btn-play");
+				const icon = playButton.querySelector("i");
+				
+				article.querySelector(".btn-lock").addEventListener("click", () => {
+					const icon = article.querySelector(".btn-lock i");
+					const isLocked = icon.classList.contains("fa-lock");
+					
+					// Chuyển trạng thái trước (optimistic update)
+					if (isLocked) {
+						icon.classList.remove("fa-lock", "fa-shake");
+						icon.classList.add("fa-lock-open", "fa-beat");
+					} else {
+						icon.classList.remove("fa-lock-open", "fa-beat");
+						icon.classList.add("fa-lock", "fa-shake");
+					}
+					
+					const newStatus = isLocked ? "unlock" : "lock";
+					
+					fetch("/unlock_file", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							_id: id,
+							status: newStatus,
+							type: type
+						})
+					})
+						.then(res => res.json())
+						.then(data => {
+							if (!data.success) {
+								alert((isLocked ? "Không thể mở khóa: " : "Không thể khóa: ") + (data.message || "Lỗi không xác định"));
+								
+								// Trả lại icon về trạng thái ban đầu nếu fail
+								if (isLocked) {
+									icon.classList.remove("fa-lock-open", "fa-beat");
+									icon.classList.add("fa-lock", "fa-shake");
+								} else {
+									icon.classList.remove("fa-lock", "fa-shake");
+									icon.classList.add("fa-lock-open", "fa-beat");
+								}
+							} else {
+								const itemInCache = dataCache.find(i => i._id === id);
+								if (itemInCache) {
+									itemInCache.IsPublic = newStatus === "unlock";
+								}
+							}
+						})
+						.catch(error => {
+							console.error("Lỗi kết nối:", error);
+							alert("Disconnect to server, please try again later !");
+							
+							// Trả lại icon về trạng thái ban đầu
+							if (isLocked) {
+								icon.classList.remove("fa-lock-open", "fa-beat");
+								icon.classList.add("fa-lock", "fa-shake");
+							} else {
+								icon.classList.remove("fa-lock", "fa-shake");
+								icon.classList.add("fa-lock-open", "fa-beat");
+							}
+						});
+				});
+				article.querySelector(".btn-play").addEventListener("click", async () => {
+					await PlayTrack(item, icon);
+				});
+				article.querySelector(".btn-delete").addEventListener("click", () => {
+					Remove_DT(item);
+				});
+			} else {
+				article.querySelector(".btn-open").addEventListener("click", async () => {
+					Popupfile(item);
+				});
+			}
 		}, 0);
 		return article;
 	}
 	
-	const buttons = document.querySelectorAll(".app-header-actions-buttons .icon-button");
-	const container = document.querySelector(".tiles");
+	const modeButtons = document.querySelectorAll('.app-header-actions-buttons:not(.abcxyz) .icon-button');
+	const container = document.querySelector('.tiles'); // hoặc div cần đổi class
+	let currentMode = 'tiles';
 	
-	let currentMode = "tiles"; // Hoặc "transfers"
-	
-	buttons.forEach((btn, index) => {
-		btn.addEventListener("click", function () {
-			buttons.forEach((b) => b.classList.remove("btn_active"));
-			this.classList.add("btn_active");
+	modeButtons.forEach((btn, index) => {
+		btn.addEventListener('click', function () {
+			modeButtons.forEach((b) => b.classList.remove('btn_active'));
+			this.classList.add('btn_active');
 			
-			// Đổi class
-			if (index === 0) {
-				container.className = "tiles";
-				currentMode = "tiles";
+			container.className = index === 0 ? 'tiles' : 'transfers';
+			currentMode = container.className;
+			
+			if (!ispublic) {
+				handleLibraryData(filtered);
 			} else {
-				container.className = "transfers";
-				currentMode = "transfers";
+				handleLibraryData(filteredPublic);
 			}
-			
-			// Load lại dữ liệu với kiểu hiển thị mới
-			handleLibraryData(filtered); // dataCache là biến chứa dữ liệu đã lấy từ server
 		});
 	});
 	
@@ -582,25 +703,32 @@
 		<div class="transfer-logo">
 			<img src="/static/img/Dotted_Note_Score-PIC_3576095_1920.jpg"/>
 		</div>
-		<span style="overflow: hidden; color: white; width: 340px">${item.Name || "Unknown"}</span>
+		<span style="overflow: hidden; color: white; width: 340px; font-size: 16px;">${item.Name || "Unknown"}</span>
 		<dl class="transfer-details">
 			<div>
 				<dt><i class="fa-solid fa-guitar"></i></dt>
-				<span id="ument">${item.Instrument || "Violin"}</span>
+				<span id="ument">${item.Instrument}</span>
 			</div>
 			<div>
 				<dt><i class="fa-solid fa-eye"></i></dt>
 				<span id="uview">${item.Views}</span>
 			</div>
 			<div>
-				<span id="utime">${item.Time}</span>
+				<span id="utime">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>`+"  "+item.username}</span>
 			</div>
 		</dl>
 		<div class="buu">
+			${!ispublic ? `
 			<span class="icon-button"><i class="fa-solid ${lockIconClass}"></i></span>
 			<span class="icon-button"><i class="fa-solid fa-pencil"></i></span>
 			<span class="icon-button"><i class="fa-solid fa-share"></i></span>
 			<span class="icon-button"><i class="fa-solid fa-trash-can"></i></span>
+			` : `
+			<span class="icon-button" style="visibility: hidden"><i class="fa-solid ${lockIconClass}"></i></span>
+			<span class="icon-button"><i class="fa-solid fa-folder-open"></i></span>
+			<span class="icon-button"><i class="fa-solid fa-share"></i></span>
+			<span class="icon-button" style="visibility: hidden"><i class="fa-solid fa-trash-can"></i></span>
+			`}
 		</div>
 		`;
 		
@@ -672,7 +800,11 @@
 			});
 			
 			lockBtn2.addEventListener("click", () => {
-				EditSheet(item);
+				if (!ispublic) {
+					EditSheet(item);
+				} else {
+					Popupfile(item);
+				}
 			});
 			
 			lockBtn3.addEventListener("click", () => {
@@ -686,7 +818,7 @@
 						if (icon) {
 							icon.classList.remove("fa-share");
 							icon.classList.add("fa-share", "fa-shake");
-							icon.style.color = "#6b5a75";
+							icon.style.color = "rgb(154, 255, 178)";
 							setTimeout(() => {
 								icon.classList.remove("fa-shake");
 								icon.style.color = "white";
@@ -742,6 +874,14 @@
 			icon.classList.add("fa-play");
 			isPlaying = false;
 		}
+	}
+	
+	function Popupfile(item) {
+		const itemType = item.Name ? "sheet" : "vocal";
+		const itemId = item._id;
+		const shareUrl = `https://127.0.0.1:3202/view_file?kind=${itemType}&item_id=${itemId}`;
+		
+		window.open(shareUrl, "_blank");
 	}
 	
 	function EditSheet(item) {
@@ -832,14 +972,21 @@
 				<span id="uview2">${item.Views}</span>
 			</div>
 			<div>
-				<span id="utime2">${item.Time}</span>
+				<span id="utime2">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>`+"  "+item.username}</span>
 			</div>
 		</dl>
 		<div class="buu">
+			${!ispublic ? `
 			<span class="icon-button"><i class="fa-solid ${lockIconClass}"></i></span>
 			<span class="icon-button btn-play"><i class="fa-solid fa-play"></i></span>
 			<span class="icon-button"><i class="fa-solid fa-share"></i></span>
 			<span class="icon-button"><i class="fa-solid fa-trash-can"></i></span>
+			` : `
+			<span class="icon-button" style="visibility: hidden"><i class="fa-solid ${lockIconClass}"></i></span>
+			<span class="icon-button btn-play"><i class="fa-solid fa-folder-open"></i></span>
+			<span class="icon-button"><i class="fa-solid fa-share"></i></span>
+			<span class="icon-button" style="visibility: hidden"><i class="fa-solid fa-trash-can"></i></span>
+			`}
 		</div>
 		`;
 		
@@ -912,7 +1059,11 @@
 			});
 			
 			lockBtn2.addEventListener("click", () => {
-				PlayTrack(item, icon);
+				if (!ispublic) {
+					PlayTrack(item, icon);
+				} else {
+					Popupfile(item);
+				}
 			});
 			
 			lockBtn3.addEventListener("click", () => {
@@ -926,7 +1077,7 @@
 						if (icon) {
 							icon.classList.remove("fa-share");
 							icon.classList.add("fa-share", "fa-shake");
-							icon.style.color = "#6b5a75";
+							icon.style.color = "rgb(154, 255, 178)";
 							setTimeout(() => {
 								icon.classList.remove("fa-shake");
 								icon.style.color = "white";
@@ -999,6 +1150,7 @@
 				tab.classList.add("active");
 				
 				const type = tab.dataset.type;
+				currentPage = 1;
 				
 				if (type === "vocal") {
 					kype = "vocal";
@@ -1006,15 +1158,12 @@
 					kype = "musicxml";
 				} else {
 					kype = "all";
-					document.querySelector(".search-field input").value = "";
-					document.querySelector(".search-field .fa-eraser").style.display = "none";
-					renderFilteredItems(dataCache);
-					return
 				}
 				
 				const asdf = new FormData();
 				asdf.append("type", kype);
-				asdf.append("amount", 1);    // gửi keyword lên server
+				asdf.append("amount", currentPage);
+				asdf.append("public", ispublic);
 				
 				fetch("/get_libary", {
 					method: "POST",
@@ -1022,8 +1171,13 @@
 				})
 					.then(response => response.json())
 					.then(data => {
-						filtered = data.data;
-						renderFilteredItems(filtered);
+						if (!ispublic) {
+							filtered = data.data;
+						} else {
+							filteredPublic = data.data;
+						}
+						renderFilteredItems(data.data);
+						updatePagination();
 					})
 					.catch(error => {
 						console.error("Lỗi khi fetch dữ liệu tìm kiếm:", error);
@@ -1032,6 +1186,46 @@
 			});
 		});
 	});
+	
+	function active_all() {
+		const tabs = document.querySelectorAll(".tabs span");
+		
+		tabs.forEach(tab => {
+			if (tab.innerText.trim() === "All") {
+				tabs.forEach(t => t.classList.remove("active"));
+				tab.classList.add("active");
+			}
+		});
+	}
+	
+	function updatePagination() {
+		currentPage = 1;
+		
+		document.querySelectorAll(".pagination").forEach(pagination => {
+			const spans = pagination.querySelectorAll("span.poi:not(:first-child):not(:last-child)");
+			
+			let pageNum = 1;
+			
+			spans.forEach((s, index) => {
+				if (index < 5) {
+					s.innerText = pageNum;
+					s.style.display = "inline-block";
+					pageNum++;
+				} else {
+					s.style.display = "none";
+				}
+			});
+			
+			pagination.querySelectorAll("span").forEach(s => s.classList.remove("aactive"));
+			
+			pagination.querySelectorAll("span").forEach(s => {
+				const text = s.innerText.trim();
+				if (parseInt(text) === 1 || (text === "Previous" && currentPage === 1)) {
+					s.classList.add("aactive");
+				}
+			});
+		});
+	}
 	
 	function renderFilteredItems(items) {
 		const container = document.querySelector(".tiles, .transfers");
@@ -1071,7 +1265,6 @@
 		clearIcon.addEventListener("click", () => {
 			searchInput.value = "";
 			clearIcon.style.display = "none";
-			filtered = dataCache;
 			
 			const pagination = document.querySelector(".pagination");
 			const spans = pagination.querySelectorAll("span");
@@ -1084,7 +1277,11 @@
 					s.classList.add("aactive");
 				}
 			});
-			renderFilteredItems(dataCache);
+			if (!ispublic) {
+				renderFilteredItems(dataCache);
+			} else {
+				renderFilteredItems(dataPublic);
+			}
 		});
 		
 		searchInput.addEventListener("keydown", (e) => {
@@ -1098,7 +1295,8 @@
 			const formData = new FormData();
 			formData.append("type", kype);
 			formData.append("amount", 1);
-			formData.append("keyword", keyword);     // gửi keyword lên server
+			formData.append("keyword", keyword);
+			formData.append("public", ispublic);
 			
 			fetch("/get_libary", {
 				method: "POST",
@@ -1106,8 +1304,13 @@
 			})
 				.then(response => response.json())
 				.then(data => {
-					filtered = data.data;  // cập nhật lại cache nếu cần
-					renderFilteredItems(filtered);  // hiển thị data đã lọc từ server
+					if (!ispublic) {
+						filtered = data.data;
+						renderFilteredItems(filtered);
+					} else {
+						filteredPublic = data.data;
+						renderFilteredItems(filteredPublic);
+					}
 				})
 				.catch(error => {
 					console.error("Lỗi khi fetch dữ liệu tìm kiếm:", error);

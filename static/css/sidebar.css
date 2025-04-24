@@ -230,7 +230,7 @@ label[for=nav-toggle] {
 #logout, #edit-profile{
 	position: relative;
 	margin-left: 8px;
-	width: 230px;
+	width: 215px;
 	height: 46px;
 	display: flex;
 	padding-left: 20px;
@@ -241,7 +241,7 @@ label[for=nav-toggle] {
 	cursor: pointer;
 	font-size: 18px;
 	z-index: 1;
-	transition: color 0.2s;
+	transition: color 0.5s;
 }
 
 #logout>i , #edit-profile>i {
@@ -251,6 +251,7 @@ label[for=nav-toggle] {
 #logout:hover, #edit-profile:hover{
 	color: black;
 	background-color: var(--background);
+	transition: 0.5s;
 }
 
 #logout span, #edit-profile>span{

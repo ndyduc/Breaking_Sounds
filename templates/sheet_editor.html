@@ -114,6 +114,7 @@
 <div class="security4 bga"></div>
 
 <script>
+	let saved = false;
 	document.querySelector('.clo').addEventListener('click', function () {
 		const asd = document.querySelector('.asd');
 		const icon = this.querySelector('i');
@@ -145,6 +146,7 @@
 	scoreView.addEventListener('editorReady', function () {
 		
 	});
+	console.log(scoreView);
 	
 	function loaddata(path) {
 		fetch(`/get_musicxml?path=${encodeURIComponent(path)}`)
@@ -204,44 +206,50 @@
 	}
 	
 	function save_musicxml() {
-		const result = scoreView.getMusicXML();
-		result.done((xml) => {
-			if (xml) {
-				let content = "";
-				const exist_id = sessionStorage.getItem("exist_id");
-				if (!exist_id) {
-					const content = prompt("Enter title for sheet:", "");
-					if (!content) {
-						alert("Name can't be empty.");
-						return;
+		if (!saved) {
+			const result = scoreView.getMusicXML();
+			result.done((xml) => {
+				if (xml) {
+					let content = "";
+					const isgene = {{ 'true' if session.get('musicxml_name') else 'false' }};
+					const exist_id = sessionStorage.getItem("exist_id");
+					if (!exist_id && !isgene) {
+						content = prompt("Enter title for sheet:", "");
+						if (!content) {
+							alert("Name can't be empty.");
+							return;
+						}
 					}
+					
+					fetch('/save_musicxml', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							musicxml: xml,
+							content: content.trim(),
+							item_id: exist_id
+						})
+					})
+						.then(res => res.json())
+						.then(data => {
+							alert(data.message);
+							saved = true;
+						})
+						.catch(err => {
+							console.error('Lỗi khi gửi dữ liệu:', err);
+							alert('Gửi thất bại.');
+						});
+					
+					
+				} else {
+					console.warn("Không có dữ liệu MusicXML");
 				}
-				
-				fetch('/save_musicxml', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						musicxml: xml,
-						content: content.trim(),
-						item_id: exist_id
-					})
-				})
-					.then(res => res.json())
-					.then(data => {
-						alert(data.message);
-					})
-					.catch(err => {
-						console.error('Lỗi khi gửi dữ liệu:', err);
-						alert('Gửi thất bại.');
-					});
-				
-				
-			} else {
-				console.warn("Không có dữ liệu MusicXML");
-			}
-		});
+			});
+		} else {
+			alert("Sheet is already saved !")
+		}
 	}
 	
 	scoreView.addEventListener('scoreDataLoaded', function handler() {
@@ -259,7 +267,7 @@
 		document.getElementById("muscixml").addEventListener("click", save_musicxml);
 	});
 
-
+	
 </script>
 </body>
 </html>

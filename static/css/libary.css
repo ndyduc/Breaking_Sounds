@@ -86,7 +86,7 @@ a {
 
 .app-header {
 	display: grid;
-	grid-template-columns: minmax(min-content, 50px) minmax(max-content, 1fr) minmax(max-content, 400px);
+	grid-template-columns: minmax(min-content, 50px) minmax(max-content, 1fr) minmax(max-content, 200px) minmax(max-content, 200px);
 	-moz-column-gap: 4rem;
 	column-gap: 4rem;
 	align-items: flex-end;
@@ -107,25 +107,25 @@ a {
 	}
 }
 
-.app-header-actions {
+.app-header-actions, .app-header-public {
 	display: flex;
 	align-items: center;
 }
 
 @media (max-width: 1200px) {
-	.app-header-actions {
+	.app-header-actions, .app-header-public {
 		display: none;
 	}
 }
 
-.app-header-actions-buttons {
+.app-header-actions-buttons, .abcxyz{
 	display: flex;
 	border-left: 1px solid var(--c-gray-600);
 	margin-left: 2rem;
 	padding-left: 2rem;
 }
 
-.app-header-actions-buttons > * + * {
+.app-header-actions-buttons > * + * , .abcxyz > * + *{
 	margin-left: 1rem;
 }
 
@@ -792,7 +792,7 @@ a {
 	width: 100%;
 	font-size: 0.875rem;
 	background-color: #2a3541;
-	border-radius: 6px;
+	border-radius: 18px;
 	padding-left: 6px;
 	box-sizing: border-box;
 	color: #939393;
@@ -806,7 +806,7 @@ a {
 }
 
 .transfer + * {
-	margin-top: 1rem;
+	margin-top: 0.5rem;
 }
 
 .transfer-logo {
@@ -827,7 +827,7 @@ a {
 }
 
 .transfer-details {
-	margin-left: 2rem;
+	margin: 0 0 0 2rem !important;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;

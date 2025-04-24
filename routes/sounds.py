@@ -31,6 +31,15 @@ Trained_DiR = os.path.join(BASE_DIR, "Trained")
 sounds = Blueprint('sounds', __name__, url_prefix='/')
 
 
+@sounds.route("/rest")
+def rest():
+	if "user_id" not in session:
+		flash("You are not logged in!", "danger")
+		return redirect(url_for("loginbase"))
+
+	return render_template("rest.html")
+
+
 @sounds.route('/generate')
 def generate():
 	return render_template('notes_generate.html')
@@ -177,7 +186,6 @@ def result_sheet():
 			return "No file uploaded", 400
 
 		file = request.files["file_up"]
-		modelname = request.form.get("modelname")
 
 		user_id = session.get("user_id") if session.get("user_id") else str(int(time.time()))
 
@@ -189,34 +197,28 @@ def result_sheet():
 
 		file.save(file_path)
 
+		if "user_id" in session:
+			file_path = os.path.join("static/Users", user_id, "uploads", filename)
+			return render_template(
+				"generate_pro.html",
+				file_path=file_path,
+				image_src=request.form.get("image_src"),
+				waveform=request.form.get("waveform"),
+				filename=request.form.get("filename"),
+				kind=request.form.get("kind"),
+				size=request.form.get("size"),
+				duration=request.form.get("duration"))
+
 		melodi_path = isolate_audio(file_path, user_id, True)
 		# melodi_path = "/Users/macbook/Downloads/Z-Python/Breaking Sounds/logs/Users/67ab9e445844b59dd13578ab/local_voice/Because_Of_You__Violin__Josh_Vietti/other.wav"
 		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-		if modelname == "CNN":
-			model = Model.CNN_3L_pro.CNN_Pro().to(device)
-			checkpoint = torch.load(os.path.join(Trained_DiR, "CNN_Pro.pth"), map_location=device, weights_only=True)
-			model.load_state_dict(checkpoint['model_state_dict'])
-			model.eval()
 
-			notes_predict = Model.CNN_3L_pro.CNN_predict(melodi_path, model, device=device)
+		model = Model.CNN_3L_pro.CNN_Pro().to(device)
+		checkpoint = torch.load(os.path.join(Trained_DiR, "CNN_Pro.pth"), map_location=device, weights_only=True)
+		model.load_state_dict(checkpoint['model_state_dict'])
+		model.eval()
 
-		elif modelname == "BiLSTM":
-			model = Model.BiLSTM.BiLSTM().to(device)
-			checkpoint = torch.load("../Trained/BiLSTM.pth", map_location=device)
-			model.load_state_dict(checkpoint['model_state_dict'])
-			model.eval()
-
-			notes_predict = Model.BiLSTM.predict_note(melodi_path, model, device)
-
-		elif modelname == "CNN_BiLSTM":
-			model = Model.CNN_BiLSTM.CNN_BiLSTM().to(device)
-			checkpoint = torch.load("../Trained/CNN_BiLSTM.pth", map_location=device)
-			model.load_state_dict(checkpoint['model_state_dict'])
-			model.eval()
-
-			notes_predict = Model.CNN_BiLSTM.predict(model, melodi_path, device=device)
-		else:
-			return jsonify({"status": False, "message": "Model does not exist"}), 500
+		notes_predict = Model.CNN_3L_pro.CNN_predict(melodi_path, model, device=device)
 
 		tempo, pulse = get_tempo_pulse(melodi_path, 44100)
 		note_data = process_notes_sum(notes_predict, tempo)
@@ -224,6 +226,59 @@ def result_sheet():
 		result_path = convert_to_musicxml(note_data, tempo, pulse, user_id, filename)
 
 		return render_template("sheet_music.html", result_path=result_path)
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
+
+
+@sounds.route("/generate-pro", methods=["POST"])
+def generate_pro():
+	user_id = session.get("user_id")
+	if not user_id:
+		flash("You need to login first!", "danger")
+		return redirect(url_for("loginbase"))
+
+	try:
+		filename = request.form.get("file_name")
+		session["musicxml_name"] = filename[:-4]
+		model = request.form.get("model")
+		instru = request.form.get("instrument")
+		file_path = request.form.get("file_path")
+
+		if not instru:
+			instru = None
+
+		melodi_path = isolate_audio(file_path, user_id, True)
+		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+		if model == "CNN":
+			model = Model.CNN_3L_pro.CNN_Pro().to(device)
+			checkpoint = torch.load(os.path.join(Trained_DiR, "CNN_Pro1791.pth"), map_location=device, weights_only=True)
+			model.load_state_dict(checkpoint['model_state_dict'])
+			model.eval()
+
+			notes_predict = Model.CNN_3L_pro.CNN_predict(melodi_path, model, device=device)
+
+		elif model == "BiLSTM":
+			model = Model.BiLSTM.BiLSTMNoteClassifier().to(device)
+			checkpoint = torch.load(os.path.join(Trained_DiR, "BiLSTM_muti.pth"), map_location=device)
+			model.load_state_dict(checkpoint)
+
+			notes_predict = Model.BiLSTM.predict(model, melodi_path, device)
+
+		elif model == "CNN-BiLSTM":
+			model = Model.CNN_BiLSTM.CNN_BiLSTM().to(device)
+			checkpoint = torch.load(os.path.join(Trained_DiR, "CNN_BiLSTM.pth"), map_location=device, weights_only=True)
+			model.load_state_dict(checkpoint['model_state_dict'])
+
+			notes_predict = Model.CNN_BiLSTM.predict(model, melodi_path, device=device)
+		else:
+			return jsonify({"status": False, "message": "Model does not exist"}), 500
+
+		tempo, pulse = get_tempo_pulse(melodi_path, 44100)
+		note_data = process_notes_sum(notes_predict, tempo)
+		result_path = convert_to_musicxml(note_data, tempo, pulse, user_id, filename, instru)
+
+		return render_template("sheet_music.html", result_path=result_path)
+
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
 
@@ -243,7 +298,7 @@ def get_sheet():
 		return jsonify({"error": str(e)}), 500
 
 
-def convert_to_musicxml(note_data, tempo, pulse, user_id, filename):
+def convert_to_musicxml(note_data, tempo, pulse, user_id, filename, instru=None):
 	"""Args:
 		note_data (list): Danh sách dict chứa thông tin nốt nhạc.
 		tempo (int): Tempo của bản nhạc.
@@ -252,88 +307,102 @@ def convert_to_musicxml(note_data, tempo, pulse, user_id, filename):
 		filename (str) : filename
 
 	Returns:
-		dict: Chứa MusicXML dưới dạng chuỗi hoặc lỗi.
+		str | dict: Đường dẫn file MusicXML hoặc dict chứa lỗi.
 	"""
 	try:
 		score = m21.stream.Score()
-		part = m21.stream.Part()
+		upper = m21.stream.PartStaff()
+		lower = m21.stream.PartStaff()
 
-		# Định nghĩa nhịp
+		# Gán ID và nhạc cụ
+		upper.id = "RH"
+		lower.id = "LH"
+
+		upper.partName = " "
+		lower.partName = " "
+
+		upper.insert(0, m21.instrument.Piano())
+
+		# Định nghĩa nhịp và tempo chỉ cần trong upper
 		time_signature = m21.meter.TimeSignature(pulse)
-		part.append(time_signature)
-
-		# Thêm tempo
 		metronome = m21.tempo.MetronomeMark(number=tempo)
-		part.append(metronome)
+		upper.append(time_signature)
+		upper.append(metronome)
 
-		last_end_beat = 0  # Thời gian kết thúc của nốt trước
+		last_end_beat = 0
 
 		for note_info in note_data:
 			midi_number = note_info["note"]
 			start_beat = note_info["start_beat"]
 			note_value = note_info["note_value"]
+			duration_beat = NOTE_DURATIONS.get(note_value.replace("tied_", ""), 1.0)
+			is_upper = midi_number >= 60
 
-			# Chuyển `note_value` sang duration (nếu có)
-			duration_beat = NOTE_DURATIONS.get(note_value, 1.0)
-
-			# Nếu có khoảng trống, thêm dấu lặng
+			# Nếu có khoảng trống -> thêm dấu lặng
 			if start_beat > last_end_beat:
 				rest_duration = start_beat - last_end_beat
 				rest = m21.note.Rest()
 				rest.duration = m21.duration.Duration(rest_duration)
-				part.append(rest)
+				if is_upper:
+					upper.append(rest)
+				else:
+					lower.append(rest)
 
-			# Xử lý tied notes
-			if "-" in note_value:  # Ví dụ: "tied_quarter-sixteenth"
+			# Nếu là tied note
+			if "-" in note_value:
 				tied_notes = note_value.split("-")
 				for i, tied_value in enumerate(tied_notes):
-					duration = NOTE_DURATIONS.get(tied_value.replace("tied_", ""), 1.0)
-					note = m21.note.Note(midi_number)
-					note.duration = m21.duration.Duration(duration)
-
+					dur = NOTE_DURATIONS.get(tied_value.replace("tied_", ""), 1.0)
+					n = m21.note.Note(midi_number)
+					n.duration = m21.duration.Duration(dur)
 					if i == 0:
-						note.tie = m21.tie.Tie("start")
+						n.tie = m21.tie.Tie("start")
 					elif i == len(tied_notes) - 1:
-						note.tie = m21.tie.Tie("stop")
+						n.tie = m21.tie.Tie("stop")
 					else:
-						note.tie = m21.tie.Tie("continue")
-
-					part.append(note)
+						n.tie = m21.tie.Tie("continue")
+					if is_upper:
+						upper.append(n)
+					else:
+						lower.append(n)
+				last_end_beat = start_beat + sum(NOTE_DURATIONS.get(t.replace("tied_", ""), 1.0) for t in tied_notes)
 			else:
-				# Tạo nốt nhạc bình thường
-				note = m21.note.Note(midi_number)
-				note.duration = m21.duration.Duration(duration_beat)
-				part.append(note)
+				n = m21.note.Note(midi_number)
+				n.duration = m21.duration.Duration(duration_beat)
+				if is_upper:
+					upper.append(n)
+				else:
+					lower.append(n)
+				last_end_beat = start_beat + duration_beat
 
-			last_end_beat = start_beat + duration_beat
+		# Thêm các staff vào score
+		score.insert(0, upper)
 
-		name, _ = os.path.splitext(filename)
+		if instru == "Piano" or instru is None:
+			score.insert(0, lower)
 
-		# Thêm Part vào Score
-		score.append(part)
-
-		# Chuẩn hóa trước khi lưu
+		# Metadata và xuất file
 		score.makeNotation()
-		# Tạo metadata
+		name, _ = os.path.splitext(filename)
 		score.metadata = metadata.Metadata()
 		score.metadata.title = name
 		score.metadata.composer = "_ndyduc_ genetive"
 
 		melody_path = os.path.join(DATA_LOGS_DIR, user_id, "musicxml", name + ".musicxml")
-		os.makedirs(os.path.join(DATA_LOGS_DIR, user_id, "musicxml"), exist_ok=True)
-
+		os.makedirs(os.path.dirname(melody_path), exist_ok=True)
 		score.write(fmt="musicxml", fp=melody_path)
 
 		with open(melody_path, "r", encoding="utf-8") as f:
 			xml_un = f.read()
 
-		xml_un = re.sub(r"<part-name />", "<part-name> </part-name>", xml_un, flags=re.DOTALL)
+		xml_un = re.sub(r"<part-name\s*/>", "<part-name> </part-name>", xml_un, flags=re.DOTALL)
 		xml_un = re.sub(r"<movement-title>.*?</movement-title>", "", xml_un, flags=re.DOTALL)
 
 		with open(melody_path, "w", encoding="utf-8") as f:
 			f.write(xml_un)
 
 		return melody_path
+
 	except Exception as e:
 		print(f"Lỗi khi chuyển đổi: {e}")
 		return {"error": str(e)}

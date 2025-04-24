@@ -79,6 +79,7 @@ def sheet_editor():
 	if path:
 		return render_template("sheet_editor.html", path=path)
 	else:
+		session.pop('musicxml_name', None)
 		return render_template("sheet_editor.html")
 
 
@@ -136,6 +137,7 @@ def save_musicxml():
 			load = update_musicxml(item_id, musicxml=musicxml_binary)
 		else:
 			load = insert_musicxml(userid=userid, musicxml=musicxml_binary, name=name)
+			session.pop('musicxml_name', None)
 
 		if load:
 			return jsonify({"message": "Save at library !", "id": load}), 200
@@ -204,11 +206,17 @@ def get_libary():
 	try:
 		kind = request.form.get("type")
 		amount = int(request.form.get("amount"))
+		public = request.form.get("public", "false").lower() == "true"
+
 		key = request.form.get("keyword")
 		if key is None:
 			key = None
 
-		user_data, amount = get_all_user_data(user_id, kind, 20, amount, key)
+		print(kind, public)
+		if public:
+			user_data, amount = get_all_public_data(kind, 20, amount, key)
+		else:
+			user_data, amount = get_all_user_data(user_id, kind, 20, amount, key)
 
 		return jsonify({"data": user_data, "amount": amount})
 	except Exception as e:

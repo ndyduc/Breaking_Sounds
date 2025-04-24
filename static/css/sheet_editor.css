@@ -72,7 +72,7 @@ body {
 #export-out {
 	position: fixed;
 	left: 0;
-	top: 150px;
+	top: 0;
 	width: auto;
 	height: auto;
 	z-index: 6;
@@ -123,6 +123,7 @@ body {
 	transition: 0.25s ease;
 	border-radius: 15px;
 	margin-left: 10px;
+	cursor: pointer;
 }
 
 .bun:hover {

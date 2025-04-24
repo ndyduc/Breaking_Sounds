@@ -13,7 +13,52 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
 	<link rel="stylesheet" href="/static/css/notes_genarate.css">
 	<link rel="icon" href="/static/logo/music_note_white.png">
-
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			let defaultIndex = 1; // Mục mặc định
+			let defaultNavButton = document.querySelector(`.nav-button:nth-of-type(${defaultIndex})`);
+			let highlight = document.getElementById("nav-content-highlight");
+			
+			if (defaultNavButton) {
+				let defaultTop = defaultNavButton.offsetTop + "px";
+				highlight.style.top = defaultTop;
+				highlight.dataset.defaultTop = defaultTop; // Lưu vị trí mặc định
+				
+				// Đặt màu cho mục mặc định
+				defaultNavButton.classList.add("active");
+				defaultNavButton.style.color = "var(--navbar-dark-primary)";
+			}
+			
+			document.querySelectorAll(".nav-button").forEach((button) => {
+				button.addEventListener("mouseenter", function () {
+					highlight.style.top = button.offsetTop + "px";
+					resetColors();
+					
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-dark-primary)"; // Mục được hover
+						defaultNavButton.style.color = "var(--navbar-light-secondary)"; // Đổi màu mặc định
+					}
+				});
+				
+				button.addEventListener("mouseleave", function () {
+					resetColors();
+					highlight.style.top = highlight.dataset.defaultTop; // Trả về vị trí mặc định
+					
+					// Nếu rời khỏi mục khác, khôi phục màu mục mặc định
+					defaultNavButton.style.color = "var(--navbar-dark-primary)";
+				});
+			});
+			
+			function resetColors() {
+				document.querySelectorAll(".nav-button").forEach(button => {
+					button.classList.remove("active");
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-light-secondary)"; // Đặt lại màu khi không phải mặc định
+					}
+				});
+			}
+		});
+	</script>
 </head>
 <body>
 <div id="gene">
@@ -33,16 +78,15 @@
 		<form action="{{ url_for('sounds.result_sheet') }}" method="post" id="info" enctype="multipart/form-data">
 			<img id="cancel" src="../static/logo/X.svg" alt="Waveform">
 			<input type="file" name="file_up" id="file_up" hidden>
-			<input type="text" name="modelname" id="modelname" value="CNN" hidden="">
 			<input type="hidden" id="hidden_file_name" name="hidden_file_name">
 			<p><strong>File Name:</strong> <label id="file_name"></label></p>
-			<div style="display: flex; justify-content: space-between; margin: 10px 0;">
+			<div style="display: flex; justify-content: space-between; margin: 5px 0">
 				<p><strong>File Type:</strong> <label id="file_type"></label></p>
 				<p><strong>File Size:</strong> <label id="file_size"></label></p>
 				<p><strong>Duration:</strong> <label id="file_duration">Loading...</label></p>
 			</div>
 			<div style="display: flex; justify-content: center;align-items: center;">
-				<img id="waveform" src="data:image/png;base64," alt=""
+				<img id="waveform" src="/static/img/waveform.png" alt=""
 				     style="width: 500px; height: 150px; border-radius: 10px">
 			</div>
 			<audio id="audio_player" controls></audio>
@@ -64,63 +108,74 @@
 </div>
 
 <script>
+	sessionStorage.removeItem("exist_id");
 	document.getElementById('cancel_message').addEventListener("click", function () {
 		document.getElementById('message').style.display = 'none';
 	})
 	
+	let saved = false;
 	document.getElementById("save_vocal").addEventListener("click", function () {
-		document.getElementById('load').style.display = 'flex';
-		fetch("/check_session_user_id")
-			.then(response => response.json())
-			.then(data => {
-				if (data.logged_in) {
-					let audioPlayer = document.getElementById("audio_player")
-					fetch(audioPlayer.src)
-						.then(response => response.blob())
-						.then(async blob => {
-							let formData = new FormData();
-							let name = document.getElementById("file_name").textContent;
-							const imgElement = document.getElementById("file_image");
-							const src = imgElement?.src || "/static/img/me.png";
-							const blob2 = await getImageBlob(src);
-							
-							if (blob2 instanceof Blob) {
-								formData.append("image", blob2, "avatar.png");
-							} else {
-								console.error("Không thể tạo Blob từ ảnh:", src);
-							}
-							
-							formData.append("audio", blob, name);
-							formData.append("image", blob2, "album_art.jpg");
-							
-							return fetch("/save_vocals", {
-								method: "POST",
-								body: formData
-							});
-						})
-						.then(response => response.json())
-						.then(result => {
-							document.getElementById('load').style.display = 'none';
-							let statusElement = document.getElementById("mess");
-							let divmess = document.getElementById("message");
-							divmess.style.display = "flex";
-							
-							if (result.status) {
-								statusElement.innerText = "File saved at vocals library !";
-							} else {
-								statusElement.innerText = result.message;
-							}
-							
-							setTimeout(() => {
-								divmess.style.display = "none";
-							}, 15000);
-						})
-						.catch(error => console.error("Error:", error));
-				} else {
-					window.location.href = "{{ url_for('loginbase') }}";
-				}
-			})
-			.catch(error => console.error("Error:", error));
+		let statusElement = document.getElementById("mess");
+		let divmess = document.getElementById("message");
+		if (!saved) {
+			document.getElementById('load').style.display = 'flex';
+			fetch("/check_session_user_id")
+				.then(response => response.json())
+				.then(data => {
+					if (data.logged_in) {
+						let audioPlayer = document.getElementById("audio_player")
+						fetch(audioPlayer.src)
+							.then(response => response.blob())
+							.then(async blob => {
+								let formData = new FormData();
+								let name = document.getElementById("file_name").textContent;
+								const imgElement = document.getElementById("file_image");
+								const src = imgElement?.src || "/static/img/me.png";
+								const blob2 = await getImageBlob(src);
+								
+								if (blob2 instanceof Blob) {
+									formData.append("image", blob2, "avatar.png");
+								} else {
+									console.error("Không thể tạo Blob từ ảnh:", src);
+								}
+								
+								formData.append("audio", blob, name);
+								formData.append("image", blob2, "album_art.jpg");
+								
+								return fetch("/save_vocals", {
+									method: "POST",
+									body: formData
+								});
+							})
+							.then(response => response.json())
+							.then(result => {
+								document.getElementById('load').style.display = 'none';
+								divmess.style.display = "flex";
+								
+								if (result.status) {
+									statusElement.innerText = "File saved at vocals library !";
+									saved = true;
+								} else {
+									statusElement.innerText = result.message;
+								}
+								
+								setTimeout(() => {
+									divmess.style.display = "none";
+								}, 15000);
+							})
+							.catch(error => console.error("Error:", error));
+					} else {
+						window.location.href = "{{ url_for('loginbase') }}";
+					}
+				})
+				.catch(error => console.error("Error:", error));
+		} else {
+			divmess.style.display = "flex";
+			statusElement.innerText = "File is already have been saved !";
+			setTimeout(() => {
+				divmess.style.display = "none";
+			}, 15000);
+		}
 	});
 	
 	function dataURLToBlob(dataURL) {
@@ -174,15 +229,33 @@
 	}
 </script>
 <script>
+	document.getElementById("info").addEventListener("submit", function (event) {
+		let form = document.getElementById("info");
+		let Size = parseFloat(document.getElementById("file_size").textContent.replace("MB", "").trim());
+		if (Size > 30) {
+			alert("The limit of size is 30MB.");
+			event.preventDefault();
+			document.getElementById("load").style.display = "none";
+		} else {
+			addHiddenInput("image_src", document.getElementById("file_image").src);
+			addHiddenInput("waveform", document.getElementById("waveform").src);
+			addHiddenInput("filename", document.getElementById("file_name").textContent.trim());
+			addHiddenInput("kind", document.getElementById("file_type").textContent.trim());
+			addHiddenInput("size", document.getElementById("file_size").textContent.trim());
+			addHiddenInput("duration", document.getElementById("file_duration").textContent.trim());
+		}
+		
+		function addHiddenInput(name, value) {
+			let input = document.createElement("input");
+			input.type = "hidden";
+			input.name = name;
+			input.value = value;
+			form.appendChild(input);
+		}
+	});
 	document.getElementById("generate_notes").addEventListener("click", function () {
 		document.getElementById("load").style.display = "flex";
 	})
-	
-	document.getElementById("isolate").addEventListener("click", function () {
-		document.getElementById("nut_bam").style.display = "none";
-		document.getElementById('load').style.display = 'flex';
-		uploadFile("isolate");
-	});
 	
 	function uploadFile(action) {
 		let fileInput = document.getElementById("file_up");
@@ -246,6 +319,8 @@
 		document.getElementById("download").style.display = "none";
 		document.getElementById("nut_bam").style.display = "flex";
 		document.getElementById("file_info").style.display = "none";
+
+		saved = false;
 	});
 	
 	document.addEventListener("DOMContentLoaded", function () {
@@ -306,18 +381,24 @@
 		document.getElementById("gene_body").style.display = "none";
 		document.getElementById("file_info").style.display = "flex";
 		
-		let formData = new FormData();
-		formData.append("file", file);
 		
-		fetch("/get_waveform", {
-			method: "POST",
-			body: formData
-		})
-			.then(response => response.blob())
-			.then(blob => {
-				document.getElementById("waveform").src = URL.createObjectURL(blob);
+		let Size = parseFloat(document.getElementById("file_size").textContent.replace("MB", "").trim());
+		
+		if (Size <= 30) {
+			let formData = new FormData();
+			formData.append("file", file);
+			
+			fetch("/get_waveform", {
+				method: "POST",
+				body: formData
 			})
-			.catch(error => console.error("Lỗi:", error));
+				.then(response => response.blob())
+				.then(blob => {
+					document.getElementById("waveform").src = URL.createObjectURL(blob);
+				})
+				.catch(error => console.error("Lỗi:", error));
+		}
+		
 	}
 	
 	function updateFileInfo(file) {
@@ -393,6 +474,18 @@
 	});
 	
 	document.getElementById("isolate").addEventListener("click", function () {
+		if (document.getElementById("file_size").content > 30) {
+			let statusElement = document.getElementById("mess");
+			let divmess = document.getElementById("message");
+			divmess.style.display = "flex";
+			statusElement.innerText = "File is already have been saved !";
+			setTimeout(() => {
+				divmess.style.display = "none";
+				
+			}, 15000);
+			return
+		}
+		
 		let Size = parseFloat(document.getElementById("file_size").textContent.replace("MB", "").trim());
 		let duration = document.getElementById("file_duration").textContent; // Lấy duration dưới dạng hh:mm:ss
 		
@@ -415,7 +508,12 @@
 		
 		if (durationInSeconds > 3600) {
 			alert("File is too long, the maximum acceptable is 1 hour.");
+			return;
 		}
+		
+		document.getElementById("nut_bam").style.display = "none";
+		document.getElementById('load').style.display = 'flex';
+		uploadFile("isolate");
 	});
 </script>
 <script>new Snowflakes();</script>

@@ -85,10 +85,11 @@ def loggin():
 			session['user_id'] = str(user["_id"])
 			avatar_url = user.get('Avatar_url')
 
-			if isinstance(avatar_url, str) and avatar_url.startswith("http"):
-				session['picture'] = avatar_url
-			else:
-				session['picture'] = decode_img(avatar_url)
+			if avatar_url is not None:
+				if isinstance(avatar_url, str) and avatar_url.startswith("http"):
+					session['picture'] = avatar_url
+				else:
+					session['picture'] = decode_img(avatar_url)
 
 			return redirect(url_for('index'))
 		else:
@@ -121,10 +122,9 @@ def verify_email(token):
 	if saved_token is None or saved_token != token:
 		return "<h2>Verify have been expire or invalid!</h2>"
 
-	id = insert_user(None, saved_username, saved_email, session.get('password'))
-	if id is not None:
-		session['user_id'] = id
-		print(session['id'])
+	new_id = insert_user(None, saved_username, saved_email, session.get('password'))
+	if new_id is not None:
+		session['user_id'] = new_id
 	else:
 		return redirect(url_for('loginbase'))
 	# Xác minh thành công → Xóa session để tránh dùng lại

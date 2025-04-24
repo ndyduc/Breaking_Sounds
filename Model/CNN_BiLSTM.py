@@ -81,7 +81,6 @@ def load_wav_csv(wav_path, csv_path=None, sr=44100, hop_length=512, window_size=
     X_train, y_notes = create_windows_torch(mel_spec_db, y_notes, window_size, step)
     return X_train, y_notes
 
-
 class CNN_BiLSTM(nn.Module):
     def __init__(self, input_channels=1, cnn_filters=32, lstm_hidden=128, num_layers=2, num_notes=128):
         super(CNN_BiLSTM, self).__init__()
@@ -231,7 +230,7 @@ def predict(model, wav_path, device, hop_length=512, sr=44100, window_size=128, 
         step (int): Bước nhảy giữa các cửa sổ.
 
     Returns:
-        List[Tuple[int, float, float]]: Danh sách các nốt [(note, start_time, duration)].
+        List[Dict[str, Union[int, float]]]: Danh sách các nốt [{"note", "start", "duration"}].
     """
     model.to(device)
     model.eval()
@@ -259,26 +258,32 @@ def predict(model, wav_path, device, hop_length=512, sr=44100, window_size=128, 
         current_time = current_sample / sr  # Chuyển đổi sang giây
 
         for note, is_active in enumerate(frame):
-            if is_active > 0.5:  # Ngưỡng để xác định nốt
+            if is_active > 0.3:
                 if note not in active_notes:
-                    active_notes[note] = current_time  # Ghi nhận thời gian bắt đầu nốt
-
+                    active_notes[note] = current_time
             else:
                 if note in active_notes:
                     start_time = active_notes.pop(note)
-                    duration = current_time - start_time  # Thời gian kéo dài của nốt
-                    notes_list.append((note + 1, start_time, duration))  # Lưu nốt nhạc
+                    duration = current_time - start_time
+                    notes_list.append({
+                        "note": note + 1,
+                        "start": start_time,
+                        "duration": duration
+                    })
 
-    # Đóng các nốt còn lại nếu có
     last_sample = (num_frames * step + window_size // 2) * hop_length
-    last_time = last_sample / sr  # Chuyển sang giây
+    last_time = last_sample / sr
 
-    for note, start_sample in active_notes.items():
-        start_time = start_sample / sr  # Chuyển đổi start_sample sang giây
-        duration = last_time - start_time  # Thời gian kéo dài đến cuối file
-        notes_list.append((note + 1, start_time, duration))
+    for note, start_time in active_notes.items():
+        duration = last_time - start_time
+        notes_list.append({
+            "note": note + 1,
+            "start": start_time,
+            "duration": duration
+        })
 
-    # Sắp xếp danh sách theo thời gian bắt đầu
-    notes_list.sort(key=lambda x: x[1])
+    notes_list.sort(key=lambda x: x["start"])
 
     return notes_list
+
+
