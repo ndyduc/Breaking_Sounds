@@ -66,9 +66,9 @@
 		<div class="app-header-logo"></div>
 		<div class="app-header-navigation" style="width: 300px;">
 			<div class="tabs">
-				<span class="active" data-type="all">All</span>
-				<span data-type="vocal">Vocals</span>
-				<span data-type="sheet">Sheet music</span>
+				<span class="active" data-type="all" style="cursor: pointer">All</span>
+				<span data-type="vocal" style="cursor: pointer">Vocals</span>
+				<span data-type="sheet" style="cursor: pointer">Sheet music</span>
 			</div>
 		</div>
 		<div class="app-header-actions">
@@ -380,7 +380,7 @@
 				${item.Views || 0}
 			</span>
 			<span class="instrument">${item.Instrument}</span>
-			<span class="time">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>`+"  "+item.username}</span>
+			<span class="time">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
 		</div>
 		<div class="abtn" class="abtn" ${ispublic ? `style="padding-left: 120px;"` : ``}>
 			${!ispublic ? `
@@ -431,6 +431,9 @@
 					.catch(err => {
 						alert("Copy failed:" + err);
 					});
+			});
+			article.querySelector(".view").addEventListener("click", () => {
+				viewfile(item);
 			});
 			
 			if (!ispublic) {
@@ -540,7 +543,7 @@
 				<i class="fa-solid fa-eye"></i>
 				${item.Views}
 			</span>
-			<span class="time" id="time2">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>`+"  "+item.username}</span>
+			<span class="time" id="time2">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
 		</div>
 		<div class="abtn" ${ispublic ? `style="padding-left: 120px;"` : ``}>
 			${!ispublic ? `
@@ -587,6 +590,9 @@
 					.catch(err => {
 						alert("Copy failed:" + err);
 					});
+			});
+			article.querySelector(".view").addEventListener("click", () => {
+				viewfile(item);
 			});
 			if (!ispublic) {
 				const id = article.querySelector(".item-id").value;
@@ -709,12 +715,12 @@
 				<dt><i class="fa-solid fa-guitar"></i></dt>
 				<span id="ument">${item.Instrument}</span>
 			</div>
-			<div>
+			<div class="ewi">
 				<dt><i class="fa-solid fa-eye"></i></dt>
 				<span id="uview">${item.Views}</span>
 			</div>
 			<div>
-				<span id="utime">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>`+"  "+item.username}</span>
+				<span id="utime">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
 			</div>
 		</dl>
 		<div class="buu">
@@ -738,7 +744,12 @@
 			const lockBtn2 = div.querySelector(".buu .icon-button:nth-child(2)");
 			const lockBtn3 = div.querySelector(".buu .icon-button:nth-child(3)");
 			const lockBtn4 = div.querySelector(".buu .icon-button:nth-child(4)");
+			const view = div.querySelector(".ewi");
 			if (!lockBtn1 || !id) return;
+			
+			view.addEventListener("click", () => {
+				viewfile(item);
+			});
 			
 			lockBtn1.addEventListener("click", () => {
 				const icon = lockBtn1.querySelector("i");
@@ -876,6 +887,12 @@
 		}
 	}
 	
+	function viewfile(item) {
+		const itemType = item.Name ? "sheet" : "vocal";
+		const itemId = item._id;
+		window.location.href = `https://127.0.0.1:3202/view_file?kind=${itemType}&item_id=${itemId}`;
+	}
+	
 	function Popupfile(item) {
 		const itemType = item.Name ? "sheet" : "vocal";
 		const itemId = item._id;
@@ -967,12 +984,12 @@
 		<span style="overflow: hidden; color: white; width: 340px;">${item.filename || "Unknown"}</span>
 		<dl class="transfer-details">
 			<div style="visibility: hidden"></div>
-			<div>
+			<div class="ewi">
 				<dt><i class="fa-solid fa-eye"></i></dt>
 				<span id="uview2">${item.Views}</span>
 			</div>
 			<div>
-				<span id="utime2">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>`+"  "+item.username}</span>
+				<span id="utime2">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
 			</div>
 		</dl>
 		<div class="buu">
@@ -992,12 +1009,17 @@
 		
 		setTimeout(() => {
 			const id = div.querySelector(".music-id")?.value;
+			const view = div.querySelector(".ewi");
 			const lockBtn1 = div.querySelector(".buu .icon-button:nth-child(1)");
 			const lockBtn2 = div.querySelector(".buu .icon-button:nth-child(2)");
 			const lockBtn3 = div.querySelector(".buu .icon-button:nth-child(3)");
 			const lockBtn4 = div.querySelector(".buu .icon-button:nth-child(4)");
 			
 			const icon = lockBtn2.querySelector("i");
+			
+			view.addEventListener("click", () => {
+				viewfile(item);
+			});
 			
 			lockBtn1.addEventListener("click", () => {
 				const icon = lockBtn1.querySelector("i");

@@ -10,13 +10,6 @@
 	<link rel="stylesheet" href="/static/css/notes_genarate.css">
 	<link rel="icon" href="/static/logo/music_note_white.png">
 	<title>Sheet Viewer</title>
-	<style>
-		#view:hover{
-			background-color: rgb(256, 188, 188);
-			color: white;
-			box-shadow: 0 0 15px 15px rgb(256, 188, 188);
-		}
-	</style>
 	<script>
 		document.addEventListener("DOMContentLoaded", function () {
 			let defaultIndex = 3; // Mục mặc định
@@ -67,78 +60,75 @@
 <body>
 <div id="gene" style="
 	background: url('/static/img/Dotted_Note_Score-PIC_3576095_1920.jpg') center/cover no-repeat !important;">
-	<form action="{{ url_for('non.viewsheet') }}" method="post" id="gene_body" enctype="multipart/form-data">
+	<div id="gene_body">
 		<img src="../static/logo/upload.svg" alt="">
 		<div id="inform">Drag or Drop file in here</div>
 		<label>(required musicxml only)</label>
 		<label>Or</label>
-		<input type="file" name="file" id="file" hidden accept=".musicxml">
+		<input type="file" id="file" accept=".musicxml" hidden>
 		<label for="file" class="custom-file-upload">Browse file</label>
-	</form>
-	<div id="file_info"
-	     style="display: none; width:30%; margin-top: 10px;color: white;">
-		<img id="cancel" src="../static/logo/X.svg" alt="Waveform">
-		<p><strong>File Name:</strong> <span id="file-name"></span></p>
-		<div style="display: flex; justify-content: space-between; margin: 30px 0 10px 0;">
-			<p><strong>File Type:</strong> <span id="file-type"></span></p>
-			<p><strong>File Size:</strong> <span id="file-size"></span></p>
-		</div>
-		<button type="submit" id="view" style="padding: 5px 10px; display: flex; justify-content: center; align-items: center; width: 200px; height: 40px; border: 0; border-radius: 15px; background-color: white; color: rgb(256, 188, 188); font-size: 22px; font-family: serif; position: relative; left: 28%; top: 30px; margin-bottom: 30px;">View file</button>
 	</div>
-	
-	<script>
-		document.getElementById("cancel").addEventListener("click", function () {
-			document.getElementById("gene_body").style.display = "flex";
-			document.getElementById("file_info").style.display = "none";
+</div>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		let dropArea = document.getElementById("gene_body");
+		let fileInput = document.getElementById("file");
+		
+		// Ngăn chặn hành vi mặc định khi kéo thả file
+		["dragenter", "dragover", "dragleave", "drop"].forEach(event => {
+			dropArea.addEventListener(event, e => e.preventDefault());
 		});
 		
-		document.getElementById("view").addEventListener("click", function (e) {
-			e.preventDefault();
-			document.getElementById("gene_body").submit();
-		});
-		
-		document.addEventListener("DOMContentLoaded", function () {
-			let dropArea = document.getElementById("gene_body");
-			let fileInput = document.getElementById("file");
-			let fileInfo = document.getElementById("file_info");
-			let fileNameSpan = document.getElementById("file-name");
-			let fileSizeSpan = document.getElementById("file-size");
-			let fileTypeSpan = document.getElementById("file-type");
-			
-			["dragenter", "dragover", "dragleave", "drop"].forEach(event => {
-				dropArea.addEventListener(event, e => e.preventDefault());
-			});
-			
-			dropArea.addEventListener("dragenter", () => dropArea.classList.add("highlight"));
-			dropArea.addEventListener("dragleave", () => dropArea.classList.remove("highlight"));
-			
-			dropArea.addEventListener("drop", function (e) {
-				dropArea.classList.remove("highlight");
-				if (e.dataTransfer.files.length > 0) {
-					processFile(e.dataTransfer.files[0]);
-				}
-			});
-			
-			fileInput.addEventListener("change", function () {
-				if (this.files.length > 0) {
-					processFile(this.files[0]);
-				}
-			});
-			
-			function processFile(file) {
+		dropArea.addEventListener("dragenter", () => dropArea.classList.add("highlight"));
+		dropArea.addEventListener("dragleave", () => dropArea.classList.remove("highlight"));
+		dropArea.addEventListener("drop", function (e) {
+			dropArea.classList.remove("highlight");
+			if (e.dataTransfer.files.length > 0) {
+				let file = e.dataTransfer.files[0];
 				if (file.name.endsWith(".musicxml")) {
-					document.getElementById('gene_body').style.display = 'none';
-					fileInfo.style.display = "block";
-					fileNameSpan.textContent = file.name;
-					fileSizeSpan.textContent = (file.size / 1024).toFixed(2) + " KB";
-					fileTypeSpan.textContent = file.type || "application/musicxml";
+					uploadFile(file);
 				} else {
-					alert("Invalid file type! Please upload a .musicxml file.");
+					alert("Please upload a .musicxml file only.");
 				}
 			}
 		});
-	</script>
-</div>
+		
+		fileInput.addEventListener("change", function () {
+			if (fileInput.files.length > 0) {
+				let file = fileInput.files[0];
+				if (file.name.endsWith(".musicxml")) {
+					uploadFile(file);
+				} else {
+					alert("Please upload a .musicxml file only.");
+				}
+			}
+		});
+		
+		function uploadFile(file) {
+    let formData = new FormData();
+    formData.append("file", file);
+
+    fetch("{{ url_for('non.viewsheet') }}", {
+        method: "POST",
+        body: formData,
+        redirect: 'follow'  // theo redirect
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Upload failed");
+        // response.url sẽ là URL sau redirect (GET với path)
+        return response.url;
+    })
+    .then(redirectUrl => {
+        // Chuyển trang sang URL backend redirect trả về
+        window.location.href = redirectUrl;
+    })
+    .catch(error => {
+        alert(error.message);
+    });
+}
+	});
+</script>
 
 </body>
 </html>

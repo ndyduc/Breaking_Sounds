@@ -521,8 +521,6 @@ def get_all_public_data(kind, limit=20, index=1, keyword=None):
 
 def get_file_by_kind_and_id(kind, item_id):
 	try:
-		collection = None
-
 		if kind == "vocal":
 			collection = Vocals
 		elif kind == "sheet":

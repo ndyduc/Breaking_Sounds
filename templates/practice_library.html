@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+{% if 'user_id' not in session %}
+{% include 'support/header.html' %}
+{% else %}
+{% include 'support/sidebar.html' %}
+{% endif %}
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Practice Library</title>
+	<link rel="icon" href="/static/logo/music_note_white.png">
+	<link rel="stylesheet" href="/static/css/libary.css">
+	<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+	<link rel="stylesheet" href="../static/css/bootstrap.css">
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			let defaultIndex = 6;
+			let defaultNavButton = document.querySelector(`.nav-button:nth-of-type(${defaultIndex})`);
+			let highlight = document.getElementById("nav-content-highlight");
+			
+			if (defaultNavButton) {
+				let defaultTop = defaultNavButton.offsetTop + "px";
+				highlight.style.top = defaultTop;
+				highlight.dataset.defaultTop = defaultTop; // Lưu vị trí mặc định
+				
+				// Đặt màu cho mục mặc định
+				defaultNavButton.classList.add("active");
+				defaultNavButton.style.color = "var(--navbar-dark-primary)";
+			}
+			
+			document.querySelectorAll(".nav-button").forEach((button) => {
+				button.addEventListener("mouseenter", function () {
+					highlight.style.top = button.offsetTop + "px";
+					resetColors();
+					
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-dark-primary)"; // Mục được hover
+						defaultNavButton.style.color = "var(--navbar-light-secondary)"; // Đổi màu mặc định
+					}
+				});
+				
+				button.addEventListener("mouseleave", function () {
+					resetColors();
+					highlight.style.top = highlight.dataset.defaultTop; // Trả về vị trí mặc định
+					
+					// Nếu rời khỏi mục khác, khôi phục màu mục mặc định
+					defaultNavButton.style.color = "var(--navbar-dark-primary)";
+				});
+			});
+			
+			function resetColors() {
+				document.querySelectorAll(".nav-button").forEach(button => {
+					button.classList.remove("active");
+					if (button !== defaultNavButton) {
+						button.style.color = "var(--navbar-light-secondary)"; // Đặt lại màu khi không phải mặc định
+					}
+				});
+			}
+		});
+	</script>
+	<style>
+		#preview {
+			position: fixed;
+			width: 100vw;
+			height: 100vh;
+			background-color: rgba(0, 0, 0, 0.68);
+			z-index: 2;
+			display: none;
+			justify-content: center;
+			align-items: center;
+		}
+		
+		#preview-content {
+			width: 80vw;
+			height: 80vh;
+			background-color: white;
+			border-radius: 30px;
+		}
+		
+		#preview > i {
+			position: fixed;
+			right: 15vw;
+			top: 15vh;
+		}
+	</style>
+</head>
+<body>
+<div id="preview">
+	<i id="close" class="fa-solid fa-xmark fa-5x" style="color: #ffb5af;"></i>
+	<iframe id="preview-content"></iframe>
+</div>
+<div class="app">
+	<div class="app-body">
+		<div class="app-body-main-content" style="padding-left: 50px;">
+			<section class="service-section">
+				<header class="app-header" style="margin-bottom: 30px">
+					<h2 id="titt" style="width: 630px">Breaking Sounds Libary</h2>
+					<div class="app-header-actions">
+						<div class="app-header-actions-buttons">
+							<button class="icon-button large btn_active">
+								<i class="fas fa-grip"></i>
+							</button>
+							<button class="icon-button large">
+								<i class="fas fa-list"></i>
+							</button>
+						</div>
+					</div>
+					<div class="app-header-public">
+						<div class="abcxyz">
+							<button class="icon-button large btn_active">
+								<i class="fas fa-user-large"></i>
+							</button>
+							<button class="icon-button large">
+								<i class="fas fa-user-group"></i>
+							</button>
+						</div>
+					</div>
+				</header>
+				<div class="service-section-header">
+					<nav style="margin: 0 0 0 120px;" aria-label="Page navigation example">
+						<ul class="pagination">
+							<li class="page-item">
+								<span class="aactive poi" tabindex="-1"
+								      style="background-color: #202A3B; border-radius: 15px 0 0 15px; color: white">Previous</span>
+							</li>
+							<li class="page-item">
+								<span class="aactive poi" tabindex="1"
+								      style="background-color: #202A3B; color: white">1</span>
+							</li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; color: white">2</span></li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; color: white">3</span></li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; color: white">4</span></li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; color: white">5</span></li>
+							<li class="page-item"><span class="poi"
+							                            style="background-color: #202A3B; border-radius: 0 15px 15px 0; color: white">Next</span>
+							</li>
+						</ul>
+					</nav>
+					<div class="search-field">
+						<input type="text" placeholder="Searching key ..." style="color: rgb(255,188,188);">
+						<i class="fa-solid fa-eraser fa-bounce"></i>
+					</div>
+					<button class="flat-button">
+						Search
+						<i class="fas fa-magnifying-glass" style="position: relative; top: 5px"></i>
+					</button>
+				</div>
+				<div class="mobile-only">
+					<button class="flat-button">
+						Toggle search
+					</button>
+				</div>
+				<div class="tiles"></div>
+			</section>
+			<div class="deepit">
+				<nav style="margin: 0 0 0 120px;" aria-label="Page navigation example">
+					<ul class="pagination">
+						<li class="page-item">
+								<span class="aactive poi" tabindex="-1"
+								      style="background-color: #202A3B; border-radius: 15px 0 0 15px; color: white">Previous</span>
+						</li>
+						<li class="page-item">
+								<span class="aactive poi" tabindex="1"
+								      style="background-color: #202A3B; color: white">1</span>
+						</li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; color: white">2</span></li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; color: white">3</span></li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; color: white">4</span></li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; color: white">5</span></li>
+						<li class="page-item"><span class="poi"
+						                            style="background-color: #202A3B; border-radius: 0 15px 15px 0; color: white">Next</span>
+						</li>
+					</ul>
+				</nav>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	let dataCache = [];
+	let dataPublic = [];
+	let filteredPublic = [];
+	let filtered = [];
+	let amount = 1;
+	let ispublic = false;
+	let currentPage = 1;
+	const maxVisiblePages = 5;
+	
+	sessionStorage.removeItem("exist_id");
+	
+	document.addEventListener("DOMContentLoaded", () => {
+		document.querySelectorAll(".pagination").forEach(pagination => {
+			pagination.addEventListener("click", (e) => {
+				const span = e.target.closest("span");
+				if (!span || !pagination.contains(span)) return;
+				
+				const pageText = span.innerText.trim();
+				let newPage = currentPage;
+				
+				if (pageText === "Previous") {
+					if (currentPage > 1) {
+						newPage = currentPage - 1;
+					} else return;
+				} else if (pageText === "Next") {
+					newPage = currentPage + 1;
+				} else {
+					const pageNum = parseInt(pageText);
+					if (!isNaN(pageNum)) {
+						newPage = pageNum;
+					} else return;
+				}
+				
+				const formDT = new FormData();
+				formDT.append("type", kype);
+				formDT.append("amount", newPage);
+				formDT.append("public", ispublic);
+				
+				fetch("/get_libary", {
+					method: "POST",
+					body: formDT
+				})
+					.then(response => response.json())
+					.then(data => {
+						if (!ispublic) {
+							filtered = data.data;
+						} else {
+							filteredPublic = data.data;
+						}
+						const totalPages = data.totalPages || 10; // fallback nếu backend chưa trả
+						
+						if ("amount" in data && !isNaN(data.amount)) {
+							currentPage = data.amount;
+						} else {
+							currentPage = newPage;
+						}
+						
+						handleLibraryData(data.data);
+						
+						document.querySelectorAll(".pagination").forEach(pagination => {
+							const spans = pagination.querySelectorAll("span.poi:not(:first-child):not(:last-child)");
+							
+							let startPage = 1;
+							let endPage = maxVisiblePages;
+							
+							if (totalPages <= maxVisiblePages) {
+								startPage = 1;
+								endPage = totalPages;
+							} else if (currentPage <= 3) {
+								startPage = 1;
+								endPage = 5;
+							} else if (currentPage >= totalPages - 2) {
+								startPage = totalPages - 4;
+								endPage = totalPages;
+							} else {
+								startPage = currentPage - 2;
+								endPage = currentPage + 2;
+							}
+							
+							let pageNum = startPage;
+							spans.forEach(s => {
+								s.innerText = pageNum;
+								pageNum++;
+							});
+							
+							pagination.querySelectorAll("span").forEach(s => s.classList.remove("aactive"));
+							
+							pagination.querySelectorAll("span").forEach(s => {
+								const text = s.innerText.trim();
+								if (parseInt(text) === currentPage) {
+									s.classList.add("aactive");
+								}
+								if (text === "Previous" && currentPage === 1) {
+									s.classList.add("aactive");
+								}
+							});
+						});
+					})
+					.catch(error => {
+						console.error("Lỗi khi fetch /get_libary:", error);
+					});
+			});
+		});
+		
+		const buttons = document.querySelectorAll('.abcxyz .icon-button');
+		const button1 = buttons[0];
+		const button2 = buttons[1];
+		
+		button2.addEventListener('click', () => {
+			ispublic = true;
+			
+			document.getElementById("titt").textContent = "Breaking Sounds Public"
+			button1.classList.remove('btn_active');
+			button2.classList.add('btn_active');
+			LoadData();
+			handleLibraryData(filteredPublic);
+			updatePagination();
+			active_all();
+		});
+		
+		button1.addEventListener('click', () => {
+			ispublic = false;
+			
+			document.getElementById("titt").textContent = "Breaking Sounds Library"
+			button2.classList.remove('btn_active');
+			button1.classList.add('btn_active');
+			handleLibraryData(filtered);
+			updatePagination();
+			active_all()
+		});
+	});
+	
+	document.addEventListener("DOMContentLoaded", function () {
+		LoadData();
+	});
+	
+	function LoadData() {
+		const formData = new FormData();
+		formData.append("type", 'musicxml');
+		formData.append("amount", 1);
+		formData.append("public", ispublic)
+		
+		fetch("/get_libary", {
+			method: "POST",
+			body: formData
+		})
+			.then(response => response.json())
+			.then(data => {
+				if (!ispublic) {
+					dataCache = data.data;
+					filtered = dataCache;
+				} else {
+					dataPublic = data.data;
+					filteredPublic = dataPublic;
+				}
+				handleLibraryData(data.data);
+			})
+			.catch(error => {
+				console.error("Lỗi khi fetch /get_libary:", error);
+			});
+	}
+	
+	function handleLibraryData(data) {
+		const container = document.querySelector(".tiles, .transfers");
+		container.innerHTML = "";
+		
+		data.forEach((item) => {
+			if (currentMode === "tiles") {
+				container.appendChild(createMusicXMLTile(item));
+				
+			} else if (currentMode === "transfers") {
+				container.appendChild(createMusicXMLTransfer(item));
+			}
+		});
+	}
+	
+	function createMusicXMLTile(item) {
+		const article = document.createElement("article");
+		article.className = "tile";
+		article.style.setProperty("height", "150px", "important");
+		const hiddenInput = `<input type="hidden" class="item-id" value="${item._id}">`;
+		
+		article.innerHTML = `
+		${hiddenInput}
+		<div class="tile-header">
+			<h3>
+				<span style="overflow-wrap: break-word;">${item.Name}</span>
+			</h3>
+		</div>
+		<div class="innoo">
+			<span class="view">
+				<i class="fa-solid fa-eye"></i>
+				${item.Views || 0}
+			</span>
+			<span class="instrument">${item.Instrument || "Piano"}</span>
+			<span class="time">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
+		</div>
+		`;
+		
+		setTimeout(() => {
+			article.addEventListener("click", (e) => {
+				if (e.button === 0) {
+					const itemId = item._id;
+					window.location.href = `https://127.0.0.1:3202/view_file?kind=sheet&item_id=${itemId}&practice=true`;
+				}
+			});
+			
+			article.addEventListener("contextmenu", (e) => {
+				e.preventDefault();
+				const itemId = item._id;
+				const popupUrl = `https://127.0.0.1:3202/view_sheet?kind=sheet&item_id=${itemId}`;
+				
+				const frame = document.getElementById("preview");
+				const maint = document.getElementById("preview-content");
+				frame.style.display = "flex";
+				maint.src = popupUrl;
+			});
+		}, 0);
+		
+		return article;
+	}
+	
+	document.getElementById("close").addEventListener("click", () => {
+		const frame = document.getElementById("preview");
+		const content = document.getElementById("preview-content");
+		
+		frame.style.display = "none";
+		if (content.tagName === "IFRAME") {
+			content.src = "";
+		} else {
+			content.innerHTML = "";
+		}
+	});
+	
+	const modeButtons = document.querySelectorAll('.app-header-actions-buttons:not(.abcxyz) .icon-button');
+	const container = document.querySelector('.tiles'); // hoặc div cần đổi class
+	let currentMode = 'tiles';
+	
+	modeButtons.forEach((btn, index) => {
+		btn.addEventListener('click', function () {
+			modeButtons.forEach((b) => b.classList.remove('btn_active'));
+			this.classList.add('btn_active');
+			
+			container.className = index === 0 ? 'tiles' : 'transfers';
+			currentMode = container.className;
+			
+			if (!ispublic) {
+				handleLibraryData(filtered);
+			} else {
+				handleLibraryData(filteredPublic);
+			}
+		});
+	});
+	
+	function createMusicXMLTransfer(item, type) {
+		const div = document.createElement("div");
+		div.className = "transfer";
+		div.style.cursor = "pointer";
+		
+		div.innerHTML = `
+		<input type="hidden" class="music-id" value="${item._id}" />
+		<div class="transfer-logo">
+			<img src="/static/img/Dotted_Note_Score-PIC_3576095_1920.jpg"/>
+		</div>
+		<span style="overflow: hidden; color: white; width: 340px; font-size: 16px;">${item.Name}</span>
+		<dl class="transfer-details">
+			<div>
+				<dt><i class="fa-solid fa-guitar"></i></dt>
+				<span id="ument">${item.Instrument}</span>
+			</div>
+			<div class="ewi">
+				<dt><i class="fa-solid fa-eye"></i></dt>
+				<span id="uview">${item.Views}</span>
+			</div>
+			<div>
+				<span id="utime">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
+			</div>
+		</dl>
+		`;
+		
+		setTimeout(() => {
+			div.addEventListener("click", (e) => {
+				if (e.button === 0) {
+					const itemId = item._id;
+					window.location.href = `https://127.0.0.1:3202/view_file?kind=sheet&item_id=${itemId}&practice=true`;
+				}
+			})
+			
+			div.addEventListener("contextmenu", (e) => {
+				e.preventDefault();
+				const itemId = item._id;
+				const popupUrl = `https://127.0.0.1:3202/view_sheet?kind=sheet&item_id=${itemId}`;
+				
+				const frame = document.getElementById("preview");
+				const maint = document.getElementById("preview-content");
+				frame.style.display = "flex";
+				maint.src = popupUrl;
+			});
+		}, 0);
+		return div;
+	}
+
+</script>
+<script>
+	let kype = "musicxml";
+	
+	function active_all() {
+		const tabs = document.querySelectorAll(".tabs span");
+		
+		tabs.forEach(tab => {
+			if (tab.innerText.trim() === "All") {
+				tabs.forEach(t => t.classList.remove("active"));
+				tab.classList.add("active");
+			}
+		});
+	}
+	
+	function updatePagination() {
+		currentPage = 1;
+		
+		document.querySelectorAll(".pagination").forEach(pagination => {
+			const spans = pagination.querySelectorAll("span.poi:not(:first-child):not(:last-child)");
+			
+			let pageNum = 1;
+			
+			spans.forEach((s, index) => {
+				if (index < 5) {
+					s.innerText = pageNum;
+					s.style.display = "inline-block";
+					pageNum++;
+				} else {
+					s.style.display = "none";
+				}
+			});
+			
+			pagination.querySelectorAll("span").forEach(s => s.classList.remove("aactive"));
+			
+			pagination.querySelectorAll("span").forEach(s => {
+				const text = s.innerText.trim();
+				if (parseInt(text) === 1 || (text === "Previous" && currentPage === 1)) {
+					s.classList.add("aactive");
+				}
+			});
+		});
+	}
+	
+	function renderFilteredItems(items) {
+		const container = document.querySelector(".tiles, .transfers");
+		container.innerHTML = "";
+		
+		items.forEach(item => {
+			if (currentMode === "tiles") {
+				container.appendChild(createMusicXMLTile(item));
+			} else if (currentMode === "transfers") {
+				container.appendChild(createMusicXMLTransfer(item));
+			}
+		});
+	}
+</script>
+<script>
+	document.addEventListener("DOMContentLoaded", () => {
+		const searchInput = document.querySelector(".search-field input");
+		const clearIcon = document.querySelector(".search-field .fa-eraser");
+		const searchButton = document.querySelector(".flat-button");
+		
+		searchInput.addEventListener("input", () => {
+			if (searchInput.value.trim() !== "") {
+				clearIcon.style.display = "flex";
+			} else {
+				clearIcon.style.display = "none";
+			}
+		});
+		
+		clearIcon.addEventListener("click", () => {
+			searchInput.value = "";
+			clearIcon.style.display = "none";
+			
+			const pagination = document.querySelector(".pagination");
+			const spans = pagination.querySelectorAll("span");
+			spans.forEach(s => s.classList.remove("aactive"));
+			
+			spans.forEach((s, index) => {
+				const text = s.innerText.trim();
+				
+				if (parseInt(text) === 1 || text === "Previous") {
+					s.classList.add("aactive");
+				}
+			});
+			if (!ispublic) {
+				renderFilteredItems(dataCache);
+			} else {
+				renderFilteredItems(dataPublic);
+			}
+		});
+		
+		searchInput.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") handleSearch();
+		});
+		searchButton.addEventListener("click", handleSearch);
+		
+		function handleSearch() {
+			const keyword = searchInput.value.trim().toLowerCase();
+			
+			const formData = new FormData();
+			formData.append("type", kype);
+			formData.append("amount", 1);
+			formData.append("keyword", keyword);
+			formData.append("public", ispublic);
+			
+			fetch("/get_libary", {
+				method: "POST",
+				body: formData
+			})
+				.then(response => response.json())
+				.then(data => {
+					if (!ispublic) {
+						filtered = data.data;
+						renderFilteredItems(filtered);
+					} else {
+						filteredPublic = data.data;
+						renderFilteredItems(filteredPublic);
+					}
+				})
+				.catch(error => {
+					console.error("Lỗi khi fetch dữ liệu tìm kiếm:", error);
+				});
+		}
+		
+		clearIcon.style.display = "none";
+	});
+</script>
+</body>
+</html>

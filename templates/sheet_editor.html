@@ -115,6 +115,7 @@
 
 <script>
 	let saved = false;
+	let path;
 	document.querySelector('.clo').addEventListener('click', function () {
 		const asd = document.querySelector('.asd');
 		const icon = this.querySelector('i');
@@ -127,7 +128,12 @@
 	});
 	
 	const urlParams = new URLSearchParams(window.location.search);
-	const path = urlParams.get('path');
+	
+	if (!urlParams.has("path")) {
+		sessionStorage.removeItem("exist_id");
+	} else {
+		path = urlParams.get('path');
+	}
 	
 	let options = {
 		host: 'www.noteflight.com',
@@ -211,7 +217,7 @@
 			result.done((xml) => {
 				if (xml) {
 					let content = "";
-					const isgene = {{ 'true' if session.get('musicxml_name') else 'false' }};
+					const isgene = {{ 'true' if session.get('musicxml_name') else 'false'}}	;
 					const exist_id = sessionStorage.getItem("exist_id");
 					if (!exist_id && !isgene) {
 						content = prompt("Enter title for sheet:", "");
@@ -267,7 +273,7 @@
 		document.getElementById("muscixml").addEventListener("click", save_musicxml);
 	});
 
-	
+
 </script>
 </body>
 </html>

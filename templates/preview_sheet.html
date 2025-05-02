@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Preview</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" href="/static/logo/music_note_white.png">
+	<script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.9.0/build/opensheetmusicdisplay.min.js"></script>
+	<link rel="stylesheet" href="/static/css/sheet_music.css">
+	<style>
+		#osmd-container {
+			margin: 0 !important;
+		}
+	</style>
+</head>
+<body>
+<div id="sheet_main">
+	<div id="osmd-container"></div>
+</div>
+<div id="notenow" style="display: none"></div>
+<input type="hidden" id="musicxml-path" value="{{ result_path }}">
+<script type="module">
+	let musicXML;
+	
+	document.addEventListener("DOMContentLoaded", async () => {
+		const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-container", {
+			autoResize: true
+		});
+		const musicXMLPath = document.getElementById("musicxml-path").value;
+		
+		if (musicXMLPath) {
+			try {
+				const response = await fetch(`/get_sheet?path=${encodeURIComponent(musicXMLPath)}`);
+				if (!response.ok) throw new Error("Lỗi khi tải file MusicXML");
+				musicXML = await response.text();
+				
+				await osmd.load(musicXML);
+				osmd.render();
+			} catch (error) {
+				console.error("Lỗi:", error);
+			}
+		}
+		
+	});
+</script>
+</body>
+</html>

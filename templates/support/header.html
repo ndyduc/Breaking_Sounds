@@ -90,9 +90,11 @@
 			
 			if (path === '') {
 				path = 'index.html';
+			} else if (path === 'viewsheet'){
+				path = 'sheet_view';
 			}
 			
-			var target = $('#navbarSupportedContent ul li a[href="/' + path + '"]');
+			let target = $('#navbarSupportedContent ul li a[href="/' + path + '"]');
 			console.log("Target found:", target.length); // Kiểm tra có tìm thấy phần tử không
 			
 			if (target.length > 0) {
@@ -100,7 +102,7 @@
 				target.parent().addClass('active'); // Gán active cho mục đúng
 			}
 		});
-		
+	
 	
 	</script>
 </head>
@@ -109,7 +111,7 @@
 	<nav class="navbar navbar-expand-custom navbar-mainbg" style="border: 0 !important; margin-bottom: 0 !important;">
 		<label>
 			<img style="color: white; width: 55px; height: 50px; padding-left: 20px"
-		            src="/static/logo/music_note_white.png" alt="">
+			     src="/static/logo/music_note_white.png" alt="">
 		</label>
 		<a class="logo" href="/">Breaking Sounds</a>
 		<div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -135,7 +137,8 @@
 					<a class="nav-link" href="/sheet_view"><i class="fas fa-eye"></i>Sheet Viewer</a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="{{ url_for('loginbase', msg_type='sheet_editor') }}"><i class="fas fa-newspaper"></i>Sheet Editor</a>
+					<a class="nav-link" href="{{ url_for('loginbase', msg_type='sheet_editor') }}"><i
+						class="fas fa-newspaper"></i>Sheet Editor</a>
 				</li>
 			</ul>
 		</div>

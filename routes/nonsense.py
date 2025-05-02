@@ -8,6 +8,7 @@ import urllib.parse
 import re
 from werkzeug.utils import secure_filename
 from bson.binary import Binary
+from lxml import etree
 import tempfile
 from music21 import converter, environment
 
@@ -47,9 +48,11 @@ def viewsheet():
 
 		file.save(file_path)
 
-		return render_template("sheet_music.html", result_path=file_path)
+		return redirect(url_for('non.viewsheet', path=file_path))
 
-	return render_template("sheet_music.html")
+	else:
+		path = request.args.get("path")
+		return render_template("sheet_music.html", result_path=path)
 
 
 @non.route('/update_sheet', methods=['POST', 'GET'])
@@ -123,7 +126,6 @@ def save_musicxml():
 		musicxml = data.get('musicxml')
 		userid = session.get("user_id")
 		item_id = data.get("item_id")
-
 		name = data.get('name', session.get("musicxml_name"))
 		if name is None:
 			name = data.get('content')
@@ -131,7 +133,19 @@ def save_musicxml():
 		if not musicxml or not userid:
 			return jsonify({"message": "Thiếu dữ liệu musicxml hoặc userid"}), 400
 
-		musicxml_binary = Binary(musicxml.encode('utf-8'))
+		parser = etree.XMLParser(remove_blank_text=True)
+		root = etree.fromstring(musicxml.encode('utf-8'), parser)
+
+		# Tìm tất cả các measure
+		for measure in root.xpath('.//measure'):
+			attributes = measure.find('attributes')
+			if attributes is not None:
+				measure.remove(attributes)
+				measure.insert(0, attributes)
+
+		# Chuyển lại thành text
+		fixed_musicxml = etree.tostring(root, encoding='utf-8', pretty_print=True, xml_declaration=True).decode('utf-8')
+		musicxml_binary = Binary(fixed_musicxml.encode('utf-8'))
 
 		if item_id:
 			load = update_musicxml(item_id, musicxml=musicxml_binary)
@@ -211,8 +225,7 @@ def get_libary():
 		key = request.form.get("keyword")
 		if key is None:
 			key = None
-
-		print(kind, public)
+		print(kind, amount, public)
 		if public:
 			user_data, amount = get_all_public_data(kind, 20, amount, key)
 		else:
@@ -278,7 +291,6 @@ def delete_data():
 
 	kind = request.form.get("type")
 	data_id = request.form.get("data_id")
-	print(kind, data_id)
 
 	check = remove_data(data_id, kind)
 	if check:
@@ -297,6 +309,10 @@ def view_file():
 
 	item = get_file_by_kind_and_id(kind, item_id)
 	user_id = session.get("user_id") if session.get("user_id") else str(int(time.time()))
+	if not item["IsPublic"]:
+		if user_id != item["user_id"]:
+			flash("This contend is Not public !")
+			return redirect(url_for("index"))
 
 	try:
 		if kind == "sheet":
@@ -313,11 +329,6 @@ def view_file():
 		else:
 			return abort(400, "Fail to view file.")
 
-		if not item["IsPublic"]:
-			if user_id != item["user_id"]:
-				flash("This contend is Not public !")
-				return redirect(url_for("index"))
-
 		os.makedirs(save_dir, exist_ok=True)
 		file_path = os.path.join(save_dir, filename)
 
@@ -326,15 +337,6 @@ def view_file():
 
 		if kind == "sheet":
 			update_musicxml(item_id, view=True)
-			with open(file_path, "rb") as f:
-				existing_data = f.read()
-
-			xml_header = '<?xml version="1.0" encoding="utf-8"?>\n'.encode('utf-8')
-
-			with open(file_path, "wb") as f:
-				f.write(xml_header)  # Ghi header vào đầu
-				f.write(existing_data)  # Ghi lại phần dữ liệu cũ
-
 			return render_template("sheet_music.html", result_path=file_path)
 		else:
 			update_vocal(item_id, view=True)
@@ -366,15 +368,6 @@ def get_xmlpath_for_edit():
 		with open(file_path, "wb") as f:
 			f.write(file_bytes)
 
-		with open(file_path, "rb") as f:
-			existing_data = f.read()
-
-		xml_header = '<?xml version="1.0" encoding="utf-8"?>\n'.encode('utf-8')
-
-		with open(file_path, "wb") as f:
-			f.write(xml_header)
-			f.write(existing_data)
-
 		return jsonify({"success": True, "musicxmlPath": file_path}), 200
 
 	except Exception as e:
@@ -394,7 +387,7 @@ def finish_edit_sheet():
 	user_id = session.get("user_id")
 
 	try:
-		file_path = os.path.join(DATA_LOGS_DIR, user_id, "local_voice", name, name+".mp3")
+		file_path = os.path.join(DATA_LOGS_DIR, user_id, "local_voice", name, name + ".mp3")
 		if not os.path.exists(file_path):
 			item = get_file_by_kind_and_id("vocal", item_id)
 			filename = item["filename"]
@@ -410,7 +403,7 @@ def finish_edit_sheet():
 
 			file_path = os.path.join("static/Users", user_id, "local_voice", subfolder, filename)
 		else:
-			file_path = os.path.join("static/Users", user_id, "local_voice", name, name+".mp3")
+			file_path = os.path.join("static/Users", user_id, "local_voice", name, name + ".mp3")
 
 		return jsonify(file_path), 200
 
@@ -419,3 +412,27 @@ def finish_edit_sheet():
 		return jsonify({"success": False, "message": "Lỗi khi xem file."}), 500
 
 
+@non.route("/view_sheet", methods=["GET"])
+def view_sheet():
+	item_id = request.args.get("item_id")
+
+	item = get_file_by_kind_and_id("sheet", item_id)
+	user_id = session.get("user_id") if session.get("user_id") else str(int(time.time()))
+
+	try:
+		filename = item.get("Name") + ".musicxml"
+		save_dir = os.path.join(DATA_LOGS_DIR, user_id, "musicxml")
+		file_bytes = item["MusicXML"]
+
+		os.makedirs(save_dir, exist_ok=True)
+		file_path = os.path.join(save_dir, filename)
+
+		with open(file_path, "wb") as f:
+			f.write(file_bytes)
+
+		update_musicxml(item_id, view=True)
+		return render_template("preview_sheet.html", result_path=file_path)
+
+	except Exception as e:
+		print(f"[Save File Error] {e}")
+		return jsonify({"success": False, "message": "Lỗi khi xem file."}), 500

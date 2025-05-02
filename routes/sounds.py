@@ -40,6 +40,11 @@ def rest():
 	return render_template("rest.html")
 
 
+@sounds.route("/practice")
+def practice():
+	return render_template("practice_library.html")
+
+
 @sounds.route('/generate')
 def generate():
 	return render_template('notes_generate.html')
@@ -210,7 +215,6 @@ def result_sheet():
 				duration=request.form.get("duration"))
 
 		melodi_path = isolate_audio(file_path, user_id, True)
-		# melodi_path = "/Users/macbook/Downloads/Z-Python/Breaking Sounds/logs/Users/67ab9e445844b59dd13578ab/local_voice/Because_Of_You__Violin__Josh_Vietti/other.wav"
 		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 		model = Model.CNN_3L_pro.CNN_Pro().to(device)
@@ -225,7 +229,7 @@ def result_sheet():
 
 		result_path = convert_to_musicxml(note_data, tempo, pulse, user_id, filename)
 
-		return render_template("sheet_music.html", result_path=result_path)
+		return redirect(url_for('non.viewsheet', path=result_path))
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
 
@@ -276,8 +280,7 @@ def generate_pro():
 		tempo, pulse = get_tempo_pulse(melodi_path, 44100)
 		note_data = process_notes_sum(notes_predict, tempo)
 		result_path = convert_to_musicxml(note_data, tempo, pulse, user_id, filename, instru)
-
-		return render_template("sheet_music.html", result_path=result_path)
+		return redirect(url_for('non.viewsheet', path=result_path))
 
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
@@ -305,6 +308,7 @@ def convert_to_musicxml(note_data, tempo, pulse, user_id, filename, instru=None)
 		pulse (str): Nhịp (vd: "4/4", "3/4").
 		user_id (str): User ID.
 		filename (str) : filename
+		instru (str) : nhac cu
 
 	Returns:
 		str | dict: Đường dẫn file MusicXML hoặc dict chứa lỗi.
@@ -331,49 +335,82 @@ def convert_to_musicxml(note_data, tempo, pulse, user_id, filename, instru=None)
 
 		last_end_beat = 0
 
-		for note_info in note_data:
-			midi_number = note_info["note"]
-			start_beat = note_info["start_beat"]
-			note_value = note_info["note_value"]
-			duration_beat = NOTE_DURATIONS.get(note_value.replace("tied_", ""), 1.0)
-			is_upper = midi_number >= 60
+		from collections import defaultdict
 
-			# Nếu có khoảng trống -> thêm dấu lặng
+		# Nhóm các note theo start_beat
+		notes_by_beat = defaultdict(list)
+		for note in note_data:
+			notes_by_beat[note["start_beat"]].append(note)
+
+		# Sắp xếp theo thời gian bắt đầu
+		sorted_beats = sorted(notes_by_beat.keys())
+
+		last_end_beat = 0
+
+		for start_beat in sorted_beats:
+			group = notes_by_beat[start_beat]
+
+			# Tách thành 2 nhóm theo staff
+			upper_notes = [n for n in group if n["note"] >= 60]
+			lower_notes = [n for n in group if n["note"] < 60]
+
+			# Nếu có khoảng trống thì thêm Rest
 			if start_beat > last_end_beat:
 				rest_duration = start_beat - last_end_beat
 				rest = m21.note.Rest()
 				rest.duration = m21.duration.Duration(rest_duration)
-				if is_upper:
+				if upper_notes:
 					upper.append(rest)
-				else:
+				if lower_notes:
 					lower.append(rest)
 
-			# Nếu là tied note
-			if "-" in note_value:
-				tied_notes = note_value.split("-")
-				for i, tied_value in enumerate(tied_notes):
-					dur = NOTE_DURATIONS.get(tied_value.replace("tied_", ""), 1.0)
-					n = m21.note.Note(midi_number)
-					n.duration = m21.duration.Duration(dur)
-					if i == 0:
-						n.tie = m21.tie.Tie("start")
-					elif i == len(tied_notes) - 1:
-						n.tie = m21.tie.Tie("stop")
+			def create_note_or_chord(note_group):
+				if not note_group:
+					return None
+
+				try:
+					duration_beat = NOTE_DURATIONS.get(note_group[0]["note_value"].replace("tied_", ""), 1.0)
+					is_tied = "tied_" in note_group[0]["note_value"]
+
+					if len(note_group) == 1:
+						n = m21.note.Note()
+						n.pitch.midi = note_group[0]["note"]
+						n.duration = m21.duration.Duration(duration_beat)
+
+						if is_tied:
+							n.tie = m21.tie.Tie("start")  # Tie bắt đầu
+						return n
+
 					else:
-						n.tie = m21.tie.Tie("continue")
-					if is_upper:
-						upper.append(n)
-					else:
-						lower.append(n)
-				last_end_beat = start_beat + sum(NOTE_DURATIONS.get(t.replace("tied_", ""), 1.0) for t in tied_notes)
-			else:
-				n = m21.note.Note(midi_number)
-				n.duration = m21.duration.Duration(duration_beat)
-				if is_upper:
-					upper.append(n)
-				else:
-					lower.append(n)
-				last_end_beat = start_beat + duration_beat
+						notes = []
+						for item in note_group:
+							single_note = m21.note.Note()
+							single_note.pitch.midi = item["note"]
+							if "tied_" in item["note_value"]:
+								single_note.tie = m21.tie.Tie("start")
+							notes.append(single_note)
+
+						chord = m21.chord.Chord(notes)
+						chord.duration = m21.duration.Duration(duration_beat)
+						if is_tied:
+							chord.tie = m21.tie.Tie("start")
+						return chord
+
+				except Exception as e:
+					print(f"Error creating note/chord: {e}")
+					return None
+
+			upper_elm = create_note_or_chord(upper_notes)
+			lower_elm = create_note_or_chord(lower_notes)
+
+			if upper_elm:
+				upper.append(upper_elm)
+			if lower_elm:
+				lower.append(lower_elm)
+
+			# Cập nhật last_end_beat
+			duration = NOTE_DURATIONS.get(group[0]["note_value"].replace("tied_", ""), 1.0)
+			last_end_beat = start_beat + duration
 
 		# Thêm các staff vào score
 		score.insert(0, upper)

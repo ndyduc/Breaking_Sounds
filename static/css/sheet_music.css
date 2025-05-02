@@ -1,0 +1,61 @@
+
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+	display: none;
+}
+
+#sheet_main {
+	width: 100%;
+	padding: 50px 0 0 0;
+}
+
+#osmd-container {
+	margin-right: 100px;
+}
+
+.prac {
+	left: 350px !important;
+}
+
+
+#notenow {
+	position: fixed;
+	top: 10px;
+	left: 575px;
+	width: 200px;
+	height: 200px;
+	border-radius: 30px;
+	background-color: #000000de;
+	color: white;
+	font-family: FredokaOne, bold, sans-serif;
+	font-size: 50px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 10;
+}
+
+#editsheet, .prac , #main, #phu{
+	padding: 5px 10px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 200px;
+	height: 40px;
+	border-radius: 15px;
+	border: 0;
+	background-color: #18283b;
+	color: white;
+	font-size: 22px;
+	font-family: serif;
+	position: absolute;
+	left: 100px;
+	top: 50px;
+	margin-bottom: 30px;
+	transition: 0.5s ease;
+}
+
+#editsheet:hover , #start-practice:hover, #main:hover, #phu:hover{
+	background-color: white;
+	color: #18283b;
+	box-shadow: 0 0 5px 5px #18283b;
+}

@@ -25,9 +25,10 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 
 body {
 	line-height: 1.5;
+	
 	min-height: 100vh;
 	font-family: "Be Vietnam Pro", sans-serif;
-	background-color: var(--c-gray-900);
+	background-color: var(--c-gray-800) !important;
 	color: var(--c-text-primary);
 	justify-content: center;
 	margin: 0 !important;
@@ -54,6 +55,27 @@ button, select, input, textarea {
 a {
 	color: inherit;
 	text-decoration: none;
+}
+
+.view{
+	cursor: pointer;
+}
+
+.view i, .transfer-details div:has(i.fa-eye) i{
+	width: 15px;
+	height: 15px;
+}
+
+.view:hover, .transfer-details div:has(i.fa-eye):hover{
+    color: white;
+	transition: 0.25s;
+}
+
+.view:hover i, .transfer-details div:has(i.fa-eye):hover i{
+	box-shadow: 0 0 0 4px var(--c-gray-800), 0 0 0 5px var(--c-text-tertiary);
+    background-color: rgba(255, 255, 255, 0.2);
+	border-radius: 50%;
+    transition: 0.25s;
 }
 
 .trap {
@@ -329,7 +351,6 @@ a {
 	width: 32px;
 	height: 32px;
 	border-radius: 50%;
-	border: 0;
 	background-color: transparent;
 	border: 1px solid var(--c-gray-500);
 	color: var(--c-text-primary);
@@ -387,12 +408,14 @@ a {
 	border-radius: 8px;
 	background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("/static/img/Dotted_Note_Score-PIC_3576095_1920.jpg") center / cover no-repeat;
 	color: white;
-	min-height: 180px;
+	height: 180px;
+	min-height: 150px;
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
 	position: relative;
 	transition: 0.25s ease;
+	cursor: pointer;
 }
 
 .tile:hover {

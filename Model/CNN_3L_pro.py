@@ -249,5 +249,3 @@ def CNN_predict(wav_path, model, device="cpu", sr=44100, hop_length=512, window_
         })
     # print(note_events)
     return note_events
-    # for idx, event in enumerate(sorted(note_events, key=lambda x: x["start"])):
-    #     print(f"{idx+1}. 🎵 Note {event['note']} - Start: {event['start']:.2f}s, Duration: {event['duration']:.2f}s")
