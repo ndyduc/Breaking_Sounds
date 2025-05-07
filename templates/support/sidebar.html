@@ -73,7 +73,10 @@
 		button.setAttribute("data-link", paths[index]);
 		
 		button.addEventListener("click", function () {
-			window.location.href = this.getAttribute("data-link");
+		const target = this.getAttribute("data-link");
+			if (window.location.pathname !== target) {
+				window.location.href = target;
+			}
 		});
 	});
 	

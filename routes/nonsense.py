@@ -336,10 +336,12 @@ def view_file():
 			f.write(file_bytes)
 
 		if kind == "sheet":
-			update_musicxml(item_id, view=True)
+			if user_id != item["user_id"]:
+				update_musicxml(item_id, view=True)
 			return render_template("sheet_music.html", result_path=file_path)
 		else:
-			update_vocal(item_id, view=True)
+			if user_id != item["user_id"]:
+				update_vocal(item_id, view=True)
 			item["data"] = os.path.join("static/Users", user_id, "local_voice", subfolder, filename)
 			return render_template("share_vocal.html", item=item)
 
@@ -430,7 +432,6 @@ def view_sheet():
 		with open(file_path, "wb") as f:
 			f.write(file_bytes)
 
-		update_musicxml(item_id, view=True)
 		return render_template("preview_sheet.html", result_path=file_path)
 
 	except Exception as e:

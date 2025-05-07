@@ -195,6 +195,8 @@ def change_pass():
 		return jsonify({"success": False, "message": "User not authenticated!"})
 
 	session['user_id'] = str(user.get('_id'))
+	session['name'] = user.get('Username')
+
 	user_up = update_user(user.get('_id'), None, None, None, pass1, None, None, None, None, None, None)
 
 	if user_up == {"success": "User updated successfully"}:
