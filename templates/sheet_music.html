@@ -12,6 +12,7 @@
 	<title>MusicXML Sheet</title>
 	<script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.9.0/build/opensheetmusicdisplay.min.js"></script>
 	<link rel="stylesheet" href="/static/css/sheet_music.css">
+	<link rel="stylesheet" href="/static/css/button.css">
 </head>
 <body>
 <div id="practice-mode" style="display: none">
@@ -22,15 +23,24 @@
 </div>
 <button type="button" id="editsheet">Edit Sheet</button>
 <button id="start-practice" class="prac">Practice</button>
-<button id="main" style="left: 800px; visibility: hidden">Top Part</button>
-<button id="phu" style="left: 1050px; visibility: hidden">Bottom Part</button>
+<div class="segmented-control" id="wtf">
+	<input type="radio" name="radio2" value="3" id="tab-1" checked/>
+	<label for="tab-1" class="segmented-control__1">
+		<p>Treble staff</p></label>
+	
+	<input type="radio" name="radio2" value="4" id="tab-2"/>
+	<label for="tab-2" class="segmented-control__2">
+		<p>Bass staff</p></label>
+	
+	<div class="segmented-control__color"></div>
+</div>
 <div id="notenow" style="display: none"></div>
 <input type="hidden" id="musicxml-path" value="{{ result_path }}">
 <script type="module">
 	import {PitchDetector} from "https://esm.sh/pitchy@4";
 	
 	let edits = document.getElementById("editsheet");
-	let user = {{ 'true' if session.get('user_id') else 'false' }};
+	let user = {{	'true'	if session.get('user_id') else	'false'}};
 	if (!user) {
 		edits.style.display = 'none';
 		document.getElementById("start-practice").style.display = "none";
@@ -69,9 +79,8 @@
 	let practicing = false;
 	
 	document.addEventListener("DOMContentLoaded", async () => {
-		let main = document.getElementById("main");
-		let phu = document.getElementById("phu");
-		
+		let phu = document.getElementById("wtf");
+		phu.style.visibility = "hidden";
 		const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-container", {
 			autoResize: true
 		});
@@ -105,21 +114,19 @@
 		}
 		
 		document.getElementById("start-practice").addEventListener("click", async () => {
-			if (practicing){
+			if (practicing) {
 				document.getElementById("next-note").disabled = true;
 				osmd.cursor.hide();
-		        practicing = false;
+				practicing = false;
 				osmd.clear();
 				osmd.load(musicXML);
 				osmd.render();
 				document.getElementById("notenow").style.display = "none";
 				document.getElementById("editsheet").style.display = "flex";
 				document.getElementById("start-practice").textContent = "Practice";
-				main.style.visibility = "hidden";
 				phu.style.visibility = "hidden";
 			} else {
 				document.getElementById("start-practice").textContent = "Stop Practice";
-				main.style.visibility = "visible";
 				phu.style.visibility = "visible";
 				await Practice(true);
 			}
@@ -130,9 +137,9 @@
 		const practice = params.get("practice");
 		
 		if (practice === "true") {
-				document.getElementById("start-practice").textContent = "Stop Practice";
-				main.style.visibility = "visible";
-				phu.style.visibility = "visible";
+			document.getElementById("start-practice").textContent = "Stop Practice";
+			main.style.visibility = "visible";
+			phu.style.visibility = "visible";
 			await Practice(true);
 		}
 		
@@ -140,7 +147,7 @@
 			beat = 0;
 			let practive;
 			let check_form = hasScorePartP2(musicXML);
-			if (!check_form){
+			if (!check_form) {
 				practive = cleanMusicXML(musicXML, main);
 				practive = filterMusicXML(practive);
 			} else {
@@ -156,7 +163,7 @@
 			let xyz = abc.parseFromString(practive, "application/xml");
 			xyz = extractNotesFromXML(xyz);
 			
-			if (!xyz){
+			if (!xyz) {
 				alert("This sheet doesn't have that part !");
 				document.getElementById("start-practice").click();
 				return;
@@ -204,66 +211,66 @@
 		}
 		
 		function mergeSilentNotes(notes) {
-		    const result = [];
-		    let tempGroup = [];
-		
-		    // Duyệt qua từng note trong mảng
-		    for (let i = 0; i < notes.length; i++) {
-		        const note = notes[i];
-		
-		        // Nếu là note null, thêm vào nhóm
-		        if (note.note === null) {
-		            tempGroup.push(note);
-		        } else {
-		            // Nếu có nhóm null tồn tại, xử lý nhóm trước khi thêm note bình thường
-		            if (tempGroup.length > 0) {
-		                // Nếu có 3 null liên tiếp, gộp thành 1
-		                if (tempGroup.length === 3) {
-		                    result.push({ note: null, duration: 1 });
-		                } else if (tempGroup.length >= 6) {
-		                    const remaining = tempGroup.length % 3;
-		
-		                    // Thêm 3 nhóm hoàn chỉnh
-		                    for (let j = 0; j < 3; j++) {
-		                        result.push({ note: null, duration: 3 });
-		                    }
-		                    // Thêm phần dư vào phần đầu nếu có
-		                    if (remaining > 0) {
-		                        result.push({ note: null, duration: remaining });
-		                    }
-		                } else {
-		                    result.push(...tempGroup);
-		                }
-		                tempGroup = [];
-		            }
-		            result.push(note);
-		        }
-		    }
-
-		    // Nếu còn nhóm null ở cuối, xử lý nhóm này
-		    if (tempGroup.length > 0) {
-		        if (tempGroup.length === 3) {
-		            result.push({ note: null, duration: 1 });
-		        } else if (tempGroup.length >= 6) {
-		            const remaining = tempGroup.length % 3;
-		
-		            for (let j = 0; j < 3; j++) {
-		                result.push({ note: null, duration: 3 });
-		            }
-		            if (remaining > 0) {
-		                result.push({ note: null, duration: remaining });
-		            }
-		        } else {
-		            result.push(...tempGroup);
-		        }
-		    }
-		
-		    return result;
+			const result = [];
+			let tempGroup = [];
+			
+			// Duyệt qua từng note trong mảng
+			for (let i = 0; i < notes.length; i++) {
+				const note = notes[i];
+				
+				// Nếu là note null, thêm vào nhóm
+				if (note.note === null) {
+					tempGroup.push(note);
+				} else {
+					// Nếu có nhóm null tồn tại, xử lý nhóm trước khi thêm note bình thường
+					if (tempGroup.length > 0) {
+						// Nếu có 3 null liên tiếp, gộp thành 1
+						if (tempGroup.length === 3) {
+							result.push({note: null, duration: 1});
+						} else if (tempGroup.length >= 6) {
+							const remaining = tempGroup.length % 3;
+							
+							// Thêm 3 nhóm hoàn chỉnh
+							for (let j = 0; j < 3; j++) {
+								result.push({note: null, duration: 3});
+							}
+							// Thêm phần dư vào phần đầu nếu có
+							if (remaining > 0) {
+								result.push({note: null, duration: remaining});
+							}
+						} else {
+							result.push(...tempGroup);
+						}
+						tempGroup = [];
+					}
+					result.push(note);
+				}
+			}
+			
+			// Nếu còn nhóm null ở cuối, xử lý nhóm này
+			if (tempGroup.length > 0) {
+				if (tempGroup.length === 3) {
+					result.push({note: null, duration: 1});
+				} else if (tempGroup.length >= 6) {
+					const remaining = tempGroup.length % 3;
+					
+					for (let j = 0; j < 3; j++) {
+						result.push({note: null, duration: 3});
+					}
+					if (remaining > 0) {
+						result.push({note: null, duration: remaining});
+					}
+				} else {
+					result.push(...tempGroup);
+				}
+			}
+			
+			return result;
 		}
 		
 		function flatToSharp(note) {
 			if (!note || typeof note !== "string") return note;
-		
+			
 			const flatToSharpMap = {
 				"Ab": "G#",
 				"Bb": "A#",
@@ -273,11 +280,11 @@
 				"Fb": "E",
 				"Gb": "F#",
 			};
-		
+			
 			// Tách cao độ (A-Gb) và quãng (số, ví dụ 4)
 			const pitch = note.slice(0, -1);
 			const octave = note.slice(-1);
-		
+			
 			const converted = flatToSharpMap[pitch];
 			if (converted) {
 				return converted + octave;
@@ -292,14 +299,18 @@
 			return data;
 		}
 		
-		main.addEventListener("click", async () => {
-			await Practice(true);
-		})
+		document.getElementById("tab-1").addEventListener("change", async (e) => {
+			if (e.target.checked) {
+				await Practice(true);  // top part
+			}
+		});
 		
-		phu.addEventListener("click", async () => {
-			await Practice(false);
-		})
-		
+		document.getElementById("tab-2").addEventListener("change", async (e) => {
+			if (e.target.checked) {
+				await Practice(false); // bottom part
+			}
+		});
+
 		document.getElementById("next-note").addEventListener("click", () => {
 			if (!osmdCursor || osmdCursor.Iterator.EndReached) return;
 			
@@ -307,11 +318,11 @@
 			osmd.cursor.show();
 			osmd.cursor.cursorElement.scrollIntoView({behavior: "smooth", block: "center"});
 			
-			if (osmdCursor.Iterator.EndReached || beat+1 >= practiceData.length) {
+			if (osmdCursor.Iterator.EndReached || beat + 1 >= practiceData.length) {
 				alert("🎉 Hoàn thành luyện tập!");
 				document.getElementById("next-note").disabled = true;
 				osmd.cursor.hide();
-		        practicing = false;
+				practicing = false;
 				beat = 0;
 				osmd.clear();
 				osmd.load(musicXML);
@@ -359,40 +370,40 @@
 		}
 		
 		function getnamenote() {
-				if (practicing) {
-			        requestAnimationFrame(getnamenote);
-			    }
-				analyser.getByteTimeDomainData(waveformData);
-				
-				// Tính độ lớn âm thanh
-				let amplitude = 0;
-				for (let i = 0; i < bufferLength; i++) {
-					smoothDataArray[i] = smoothDataArray[i] * 0.9 + waveformData[i] * 0.1;
-					let normalizedValue = Math.abs((smoothDataArray[i] - 128) / 128.0);
-					amplitude += normalizedValue;
-				}
-				amplitude /= bufferLength;
-				
-				// Chuyển sang dạng Float32Array cho pitch detector
-				const floatWaveformData = new Float32Array(bufferLength);
-				for (let i = 0; i < bufferLength; i++) {
-					floatWaveformData[i] = (waveformData[i] - 128) / 128.0;
-				}
-				
-				const pitch = pitchDetector.findPitch(floatWaveformData, audioContext.sampleRate);
-				
-				if (pitch && pitch[0] > 0 && pitch[0] < 5000 && amplitude > 0.005) {
-					let detectedPitch = pitch[0];
-					if (getNoteName(detectedPitch) === practiceData[beat].note) {
-						osmdCursor.next();
-						osmd.cursor.show();
-						osmd.cursor.cursorElement.scrollIntoView({behavior: "smooth", block: "center"});
-						
-						beat++;
-						updatenote();
-					}
+			if (practicing) {
+				requestAnimationFrame(getnamenote);
+			}
+			analyser.getByteTimeDomainData(waveformData);
+			
+			// Tính độ lớn âm thanh
+			let amplitude = 0;
+			for (let i = 0; i < bufferLength; i++) {
+				smoothDataArray[i] = smoothDataArray[i] * 0.9 + waveformData[i] * 0.1;
+				let normalizedValue = Math.abs((smoothDataArray[i] - 128) / 128.0);
+				amplitude += normalizedValue;
+			}
+			amplitude /= bufferLength;
+			
+			// Chuyển sang dạng Float32Array cho pitch detector
+			const floatWaveformData = new Float32Array(bufferLength);
+			for (let i = 0; i < bufferLength; i++) {
+				floatWaveformData[i] = (waveformData[i] - 128) / 128.0;
+			}
+			
+			const pitch = pitchDetector.findPitch(floatWaveformData, audioContext.sampleRate);
+			
+			if (pitch && pitch[0] > 0 && pitch[0] < 5000 && amplitude > 0.005) {
+				let detectedPitch = pitch[0];
+				if (getNoteName(detectedPitch) === practiceData[beat].note) {
+					osmdCursor.next();
+					osmd.cursor.show();
+					osmd.cursor.cursorElement.scrollIntoView({behavior: "smooth", block: "center"});
+					
+					beat++;
+					updatenote();
 				}
 			}
+		}
 	});
 	
 	function hasScorePartP2(xmlString) {
@@ -401,98 +412,99 @@
 		const scorePartP2 = xmlDoc.querySelector('score-part[id="P2"]');
 		return scorePartP2 !== null;
 	}
+	
 	function cleanMusicXML(xmlString, keepRightHand = true) {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-
-    // Chỉ làm việc với 1 part
-    const part = xmlDoc.querySelector("part");
-    if (part) {
-        const measures = part.getElementsByTagName("measure");
-        for (let measure of measures) {
-            const notes = measure.getElementsByTagName("note");
-            for (let i = notes.length - 1; i >= 0; i--) {
-                const staffElem = notes[i].getElementsByTagName("staff")[0];
-                if (staffElem) {
-                    const staffNumber = staffElem.textContent.trim();
-                    // Nếu giữ tay phải, xoá note staff 2
-                    if (keepRightHand && staffNumber === "2") {
-                        notes[i].parentNode.removeChild(notes[i]);
-                    }
-                    // Nếu giữ tay trái, xoá note staff 1
-                    if (!keepRightHand && staffNumber === "1") {
-                        notes[i].parentNode.removeChild(notes[i]);
-                    }
-                }
-            }
-        }
-    }
-
-    // Chỉnh attributes
-    const attributesList = xmlDoc.getElementsByTagName("attributes");
-    for (let attr of attributesList) {
-        // Luôn sửa staves về 1
-        const stavesElem = attr.getElementsByTagName("staves")[0];
-        if (stavesElem) {
-            stavesElem.textContent = "1";
-        }
-
-        // Giữ lại clef phù hợp
-        const clefs = attr.getElementsByTagName("clef");
-        for (let i = clefs.length - 1; i >= 0; i--) {
-            const clef = clefs[i];
-            const number = clef.getAttribute("number");
-            if (keepRightHand && number === "2") {
-                clef.parentNode.removeChild(clef);
-            }
-            if (!keepRightHand && number === "1") {
-                clef.parentNode.removeChild(clef);
-            }
-        }
-
-        // Xóa <part-symbol> nếu có
-        const partSymbol = attr.getElementsByTagName("part-symbol")[0];
-        if (partSymbol) {
-            partSymbol.parentNode.removeChild(partSymbol);
-        }
-    }
-
-    const serializer = new XMLSerializer();
-    return serializer.serializeToString(xmlDoc);
-}
+		const parser = new DOMParser();
+		const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+		
+		// Chỉ làm việc với 1 part
+		const part = xmlDoc.querySelector("part");
+		if (part) {
+			const measures = part.getElementsByTagName("measure");
+			for (let measure of measures) {
+				const notes = measure.getElementsByTagName("note");
+				for (let i = notes.length - 1; i >= 0; i--) {
+					const staffElem = notes[i].getElementsByTagName("staff")[0];
+					if (staffElem) {
+						const staffNumber = staffElem.textContent.trim();
+						// Nếu giữ tay phải, xoá note staff 2
+						if (keepRightHand && staffNumber === "2") {
+							notes[i].parentNode.removeChild(notes[i]);
+						}
+						// Nếu giữ tay trái, xoá note staff 1
+						if (!keepRightHand && staffNumber === "1") {
+							notes[i].parentNode.removeChild(notes[i]);
+						}
+					}
+				}
+			}
+		}
+		
+		// Chỉnh attributes
+		const attributesList = xmlDoc.getElementsByTagName("attributes");
+		for (let attr of attributesList) {
+			// Luôn sửa staves về 1
+			const stavesElem = attr.getElementsByTagName("staves")[0];
+			if (stavesElem) {
+				stavesElem.textContent = "1";
+			}
+			
+			// Giữ lại clef phù hợp
+			const clefs = attr.getElementsByTagName("clef");
+			for (let i = clefs.length - 1; i >= 0; i--) {
+				const clef = clefs[i];
+				const number = clef.getAttribute("number");
+				if (keepRightHand && number === "2") {
+					clef.parentNode.removeChild(clef);
+				}
+				if (!keepRightHand && number === "1") {
+					clef.parentNode.removeChild(clef);
+				}
+			}
+			
+			// Xóa <part-symbol> nếu có
+			const partSymbol = attr.getElementsByTagName("part-symbol")[0];
+			if (partSymbol) {
+				partSymbol.parentNode.removeChild(partSymbol);
+			}
+		}
+		
+		const serializer = new XMLSerializer();
+		return serializer.serializeToString(xmlDoc);
+	}
 	
 	function normalizeNoteObject(noteObj) {
-	    if (!noteObj || typeof noteObj !== 'object') return noteObj;
-	
-	    const note = noteObj.note;
-	    if (!note) return noteObj; // Nếu không có note thì trả về nguyên
-	
-	    const match = note.match(/^([A-G])(#|b)?(\d)$/);
-	    if (!match) return noteObj; // Không match thì trả nguyên
-	
-	    let [, step, accidental, octave] = match;
-	    octave = parseInt(octave);
-	
-	    if (step === "C" && accidental === "𝐛") {
-	        step = "B";
-	        octave -= 1;
-	        accidental = null;
-	    } else if (step === "E" && accidental === "﹟") {
-	        step = "F";
-	        accidental = null;
-	    } else if (step === "F" && accidental === "𝐛") {
-	        step = "E";
-	        accidental = null;
-	    } else if (step === "B" && accidental === "﹟") {
-	        step = "C";
-	        octave += 1;
-	        accidental = null;
-	    }
-	
-	    return {
-	        ...noteObj,
-	        note: step + (accidental || "") + octave
-	    };
+		if (!noteObj || typeof noteObj !== 'object') return noteObj;
+		
+		const note = noteObj.note;
+		if (!note) return noteObj; // Nếu không có note thì trả về nguyên
+		
+		const match = note.match(/^([A-G])(#|b)?(\d)$/);
+		if (!match) return noteObj; // Không match thì trả nguyên
+		
+		let [, step, accidental, octave] = match;
+		octave = parseInt(octave);
+		
+		if (step === "C" && accidental === "𝐛") {
+			step = "B";
+			octave -= 1;
+			accidental = null;
+		} else if (step === "E" && accidental === "﹟") {
+			step = "F";
+			accidental = null;
+		} else if (step === "F" && accidental === "𝐛") {
+			step = "E";
+			accidental = null;
+		} else if (step === "B" && accidental === "﹟") {
+			step = "C";
+			octave += 1;
+			accidental = null;
+		}
+		
+		return {
+			...noteObj,
+			note: step + (accidental || "") + octave
+		};
 	}
 	
 	function getNoteName(frequency) {
@@ -538,9 +550,9 @@
 	function removeHandPart(xmlString, instrument) {
 		const parser = new DOMParser();
 		const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-	
+		
 		const partToRemove = instrument ? "P2" : "P1";
-	
+		
 		// Xóa phần <part>
 		const parts = xmlDoc.querySelectorAll("part");
 		for (let i = parts.length - 1; i >= 0; i--) {
@@ -549,7 +561,7 @@
 				part.parentNode.removeChild(part);
 			}
 		}
-	
+		
 		// Xóa phần <score-part> trong <part-list>
 		const scoreParts = xmlDoc.querySelectorAll("score-part");
 		for (let i = scoreParts.length - 1; i >= 0; i--) {
@@ -558,7 +570,7 @@
 				scorePart.parentNode.removeChild(scorePart);
 			}
 		}
-	
+		
 		const serializer = new XMLSerializer();
 		return serializer.serializeToString(xmlDoc);
 	}

@@ -313,7 +313,7 @@
 	function LoadData() {
 		const formData = new FormData();
 		formData.append("type", 'all');
-		formData.append("amount", 1);
+		formData.append("amount", currentPage);
 		formData.append("public", ispublic)
 		
 		fetch("/get_libary", {
@@ -380,7 +380,16 @@
 				${item.Views || 0}
 			</span>
 			<span class="instrument">${item.Instrument}</span>
-			<span class="time">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
+			<span class="time">
+			  ${!ispublic
+			    ? item.Time
+			    : `
+			      <i class="fa-solid fa-user-large"></i> ${item.username}
+			      <img class="user-img"
+			           src="${item.avatar_base64 ? `data:image/png;base64,${item.avatar_base64}` : 'static/img/me.png'}"
+			           alt="">
+			    `}
+			</span>
 		</div>
 		<div class="abtn" class="abtn" ${ispublic ? `style="padding-left: 120px;"` : ``}>
 			${!ispublic ? `
@@ -543,7 +552,16 @@
 				<i class="fa-solid fa-eye"></i>
 				${item.Views}
 			</span>
-			<span class="time" id="time2">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
+			<span class="time">
+			  ${!ispublic
+			    ? item.Time
+			    : `
+			      <i class="fa-solid fa-user-large"></i> ${item.username}
+			      <img class="user-img"
+			           src="${item.avatar_base64 ? `data:image/png;base64,${item.avatar_base64}` : 'static/img/me.png'}"
+			           alt="">
+			    `}
+			</span>
 		</div>
 		<div class="abtn" ${ispublic ? `style="padding-left: 120px;"` : ``}>
 			${!ispublic ? `
@@ -694,7 +712,7 @@
 		});
 	});
 	
-	function createMusicXMLTransfer(item, type) {
+ 	function createMusicXMLTransfer(item, type) {
 		const div = document.createElement("div");
 		div.className = "transfer";
 		const isPublic = item.IsPublic === true; // hoặc item.ispublic tùy bạn dùng field nào
@@ -720,7 +738,16 @@
 				<span id="uview">${item.Views}</span>
 			</div>
 			<div>
-				<span id="utime">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
+				<span id="utime">
+				  ${!ispublic
+				    ? item.Time
+				    : `
+				      <i class="fa-solid fa-user-large"></i> ${item.username}
+				      <img class="user-img2"
+				           src="${item.avatar_base64 ? `data:image/png;base64,${item.avatar_base64}` : 'static/img/me.png'}"
+				           alt="">
+				    `}
+				</span>
 			</div>
 		</dl>
 		<div class="buu">
@@ -989,7 +1016,16 @@
 				<span id="uview2">${item.Views}</span>
 			</div>
 			<div>
-				<span id="utime2">${!ispublic ? item.Time : `<i class="fa-solid fa-user-large"></i>` + "  " + item.username}</span>
+				<span id="utime">
+				  ${!ispublic
+				    ? item.Time
+				    : `
+				      <i class="fa-solid fa-user-large"></i> ${item.username}
+				      <img class="user-img2"
+				           src="${item.avatar_base64 ? `data:image/png;base64,${item.avatar_base64}` : 'static/img/me.png'}"
+				           alt="">
+				    `}
+				</span>
 			</div>
 		</dl>
 		<div class="buu">

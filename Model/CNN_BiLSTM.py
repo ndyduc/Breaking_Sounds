@@ -81,6 +81,7 @@ def load_wav_csv(wav_path, csv_path=None, sr=44100, hop_length=512, window_size=
     X_train, y_notes = create_windows_torch(mel_spec_db, y_notes, window_size, step)
     return X_train, y_notes
 
+
 class CNN_BiLSTM(nn.Module):
     def __init__(self, input_channels=1, cnn_filters=32, lstm_hidden=128, num_layers=2, num_notes=128):
         super(CNN_BiLSTM, self).__init__()

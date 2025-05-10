@@ -365,6 +365,14 @@ def get_all_public_data(kind, limit=20, index=1, keyword=None):
 				if "img" in item:
 					item["img_base64"] = base64.b64encode(item["img"]).decode("utf-8")
 					del item["img"]
+
+			if "avatar_url" in item:
+				try:
+					item["avatar_base64"] = base64.b64encode(item["avatar_url"]).decode("utf-8")
+				except Exception:
+					item["avatar_base64"] = None
+				del item["avatar_url"]
+
 			item["_id"] = str(item["_id"])
 			item["user_id"] = str(item["user_id"])
 			return item
@@ -396,6 +404,7 @@ def get_all_public_data(kind, limit=20, index=1, keyword=None):
 					"Views": 1,
 					"user_id": 1,
 					"username": "$user_info.Username",
+					"avatar_url": "$user_info.Avatar_url",
 					"_id": 1
 				}},
 				{"$sort": {"Time": -1}},
@@ -429,6 +438,7 @@ def get_all_public_data(kind, limit=20, index=1, keyword=None):
 					"Views": 1,
 					"user_id": 1,
 					"username": "$user_info.Username",
+					"avatar_url": "$user_info.Avatar_url",
 					"img": 1,
 					"_id": 1
 				}},
@@ -498,6 +508,7 @@ def get_all_public_data(kind, limit=20, index=1, keyword=None):
 					"Views": 1,
 					"user_id": 1,
 					"username": "$user_info.Username",
+					"avatar_url": "$user_info.Avatar_url",
 					"Instrument": 1,
 					"Name": 1,
 					"filename": 1,

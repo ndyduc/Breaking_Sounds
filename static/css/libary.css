@@ -531,6 +531,8 @@ a {
 .time {
 	position: absolute;
 	top: 120px;
+	display: flex;
+	justify-content: space-between;
 	right: 0.5rem;
 	font-size: 6px;
 	color: var(--ndyduc);
@@ -971,6 +973,19 @@ a {
 	cursor: pointer;
 }
 
+#utime{
+	display: flex;
+	width: 120px;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.user-img2{
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+}
+
 .card-button.mastercard svg {
 	max-height: 15px;
 }
@@ -1063,4 +1078,16 @@ textarea:focus,
 button:focus {
 	outline: 0;
 	box-shadow: 0 0 0 2px var(--c-gray-800), 0 0 0 4px var(--c-gray-300);
+}
+
+
+.user-img{
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	margin: 0 0 0 15px;
+}
+
+.time > i {
+	margin-right: 15px;
 }

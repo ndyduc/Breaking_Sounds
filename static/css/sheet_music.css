@@ -16,6 +16,34 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 	left: 350px !important;
 }
 
+.segmented-control {
+	grid-column: 3/4;
+	grid-row: 1/2;
+	width: 20.4rem;
+	height: 4rem;
+	box-shadow: 0.3rem 0.3rem 0.6rem #afbcd6, -0.2rem -0.2rem 0.5rem #fff;
+	border-radius: 1rem;
+	display: flex;
+	align-items: center;
+	position: relative;
+}
+
+.segmented-control > input:checked + label {
+	transition: all 0.5s ease;
+	color: rgb(255, 188, 188);
+}
+
+.segmented-control__1, .segmented-control__2, .segmented-control__3 {
+	width: 6.8rem;
+	height: 3.6rem;
+	font-size: 1.4rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: pointer;
+	color: grey;
+	transition: all 0.5s ease;
+}
 
 #notenow {
 	position: fixed;
@@ -34,7 +62,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 	z-index: 10;
 }
 
-#editsheet, .prac , #main, #phu{
+#editsheet, .prac, #main, #phu {
 	padding: 5px 10px;
 	display: flex;
 	justify-content: center;
@@ -54,7 +82,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 	transition: 0.5s ease;
 }
 
-#editsheet:hover , #start-practice:hover, #main:hover, #phu:hover{
+#editsheet:hover, #start-practice:hover, #main:hover, #phu:hover {
 	background-color: white;
 	color: #18283b;
 	box-shadow: 0 0 5px 5px #18283b;
