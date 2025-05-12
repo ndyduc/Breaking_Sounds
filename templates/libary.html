@@ -284,6 +284,7 @@
 		
 		button2.addEventListener('click', () => {
 			ispublic = true;
+			clearIcon.click();
 			
 			document.getElementById("titt").textContent = "Breaking Sounds Public"
 			button1.classList.remove('btn_active');
@@ -296,11 +297,12 @@
 		
 		button1.addEventListener('click', () => {
 			ispublic = false;
+			clearIcon.click();
 			
 			document.getElementById("titt").textContent = "Breaking Sounds Library"
 			button2.classList.remove('btn_active');
 			button1.classList.add('btn_active');
-			handleLibraryData(filtered);
+			handleLibraryData(dataCache);
 			updatePagination();
 			active_all()
 		});
@@ -313,7 +315,7 @@
 	function LoadData() {
 		const formData = new FormData();
 		formData.append("type", 'all');
-		formData.append("amount", currentPage);
+		formData.append("amount", 1);
 		formData.append("public", ispublic)
 		
 		fetch("/get_libary", {
@@ -1307,9 +1309,9 @@
 	}
 </script>
 <script>
+	const clearIcon = document.querySelector(".search-field .fa-eraser");
 	document.addEventListener("DOMContentLoaded", () => {
 		const searchInput = document.querySelector(".search-field input");
-		const clearIcon = document.querySelector(".search-field .fa-eraser");
 		const searchButton = document.querySelector(".flat-button");
 		
 		searchInput.addEventListener("input", () => {

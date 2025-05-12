@@ -132,6 +132,9 @@ def get_waveform():
 
 				result_dict["buffer"] = img_buffer
 			except Exception as e:
+				import traceback
+				traceback_str = traceback.format_exc()
+				print("[THREAD ERROR]", traceback_str)
 				result_dict["error"] = str(e)
 
 		t = threading.Thread(target=task, args=(file_data, thread_result))
