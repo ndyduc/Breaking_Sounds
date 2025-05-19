@@ -919,6 +919,7 @@
 	function viewfile(item) {
 		const itemType = item.Name ? "sheet" : "vocal";
 		const itemId = item._id;
+		sessionStorage.setItem("exist_id", item._id)
 		window.location.href = `https://127.0.0.1:3202/view_file?kind=${itemType}&item_id=${itemId}`;
 	}
 	

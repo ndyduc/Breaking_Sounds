@@ -16,7 +16,7 @@
 </head>
 <body>
 <div id="practice-mode" style="display: none">
-	<button id="next-note" disabled>Click để luyện nốt tiếp</button>
+	<button id="next-note" disabled>.</button>
 </div>
 <div id="sheet_main">
 	<div id="osmd-container"></div>
@@ -36,9 +36,11 @@
 </div>
 <div id="notenow" style="display: none"></div>
 <input type="hidden" id="musicxml-path" value="{{ result_path }}">
+
 <script type="module">
 	import {PitchDetector} from "https://esm.sh/pitchy@4";
 	
+	console.log(sessionStorage.getItem("exist_id"));
 	let edits = document.getElementById("editsheet");
 	let user = {{	'true'	if session.get('user_id') else	'false'}};
 	if (!user) {
@@ -47,7 +49,6 @@
 	} else {
 		edits.addEventListener('click', function () {
 			const musicxmlPath = document.getElementById("musicxml-path").value;
-			
 			fetch('/edit_upload_sheet', {
 				method: 'POST',
 				headers: {

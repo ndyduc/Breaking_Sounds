@@ -113,7 +113,6 @@ def edit_upload_sheet():
 		if not path:
 			return jsonify({"success": False, "message": "Invalid file format"}), 400
 
-		# Trả về JSON chứa URL để chuyển hướng thay vì dùng redirect()
 		return jsonify({"success": True, "redirect_url": url_for('non.sheet_editor', path=path)})
 	except Exception as e:
 		print(e)
@@ -347,6 +346,7 @@ def view_file():
 
 	try:
 		if kind == "sheet":
+			session["musicxml_name"] = item.get("Name")
 			filename = item.get("Name") + ".musicxml"
 			save_dir = os.path.join(DATA_LOGS_DIR, user_id, "musicxml")
 			file_bytes = item["MusicXML"]
