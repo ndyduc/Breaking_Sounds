@@ -330,7 +330,6 @@
 				document.getElementById("notenow").style.display = "none";
 				document.getElementById("editsheet").style.display = "flex";
 				document.getElementById("start-practice").textContent = "Practice";
-				main.style.visibility = "hidden";
 				phu.style.visibility = "hidden";
 				return;
 			}
@@ -411,7 +410,21 @@
 					osmdCursor.next();
 					osmd.cursor.show();
 					osmd.cursor.cursorElement.scrollIntoView({behavior: "smooth", block: "center"});
-					
+					if (osmdCursor.Iterator.EndReached || beat + 1 >= practiceData.length) {
+						alert("🎉 Hoàn thành luyện tập!");
+						document.getElementById("next-note").disabled = true;
+						osmd.cursor.hide();
+						practicing = false;
+						beat = 0;
+						osmd.clear();
+						osmd.load(musicXML);
+						osmd.render();
+						document.getElementById("notenow").style.display = "none";
+						document.getElementById("editsheet").style.display = "flex";
+						document.getElementById("start-practice").textContent = "Practice";
+						phu.style.visibility = "hidden";
+						return;
+					}
 					beat++;
 					updatenote();
 				}

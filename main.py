@@ -394,3 +394,4 @@ def link_to_gg():
 
 if __name__ == '__main__':
 	app.run(debug=True, host='0.0.0.0', port=3202, ssl_context=('certificate.crt', 'private.key'))
+
