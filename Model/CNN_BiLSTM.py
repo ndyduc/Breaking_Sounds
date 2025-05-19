@@ -13,11 +13,7 @@ import librosa.feature
 import matplotlib.pyplot as plt
 import glob
 import os
-
-
-import numpy as np
 import librosa
-import torch
 
 
 def load_wav_csv(wav_path, csv_path=None, sr=44100, hop_length=512, window_size=128, step=11):

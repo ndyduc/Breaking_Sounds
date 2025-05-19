@@ -12,6 +12,8 @@ from lxml import etree
 import tempfile
 from music21 import converter, environment
 
+
+import xml.etree.ElementTree as ET
 from flask import *
 from src.data_connecter import *
 
@@ -172,23 +174,52 @@ def save_pdf():
 		if not musicxml:
 			return {"message": "Thiếu dữ liệu MusicXML."}, 400
 
+		root = ET.fromstring(musicxml)
+		for part in root.findall('.//part'):
+			for measure in part.findall('measure'):
+				attributes = None
+				attr_index = None
+				note_index = None
+
+				# Tìm vị trí <attributes> và <note> đầu tiên
+				for idx, elem in enumerate(measure):
+					if elem.tag == 'attributes':
+						attributes = elem
+						attr_index = idx
+					if elem.tag == 'note' and note_index is None:
+						note_index = idx
+
+				# Nếu <attributes> nằm sau <note> thì di chuyển lên trước
+				if (
+					attributes is not None and
+					note_index is not None and
+					attr_index > note_index
+				):
+					# Bỏ <attributes> tại vị trí cũ và chèn lại
+					del measure[attr_index]
+					measure.insert(note_index, attributes)
+
+		# Ghi lại chuỗi MusicXML đã sửa
+		musicxml_cleaned = ET.tostring(root, encoding='unicode')
+
+		# Tạo tên file
 		timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 		pdf_filename = f"sheet_{timestamp}.pdf"
-
 		user_id = session.get("user_id")
 
 		musicxml_dir = os.path.join(DATA_LOGS_DIR, user_id, "musicxml")
 		os.makedirs(musicxml_dir, exist_ok=True)
 		musicxml_path = os.path.join(musicxml_dir, f"music_{timestamp}.musicxml")
+
 		pdf_dir = os.path.join(DATA_LOGS_DIR, user_id, "pdf")
 		os.makedirs(pdf_dir, exist_ok=True)
 		pdf_path = os.path.join(pdf_dir, pdf_filename)
 
-		# Lưu file MusicXML
+		# Lưu file MusicXML đã chỉnh
 		with open(musicxml_path, "w", encoding='utf-8') as f:
-			f.write(musicxml)
+			f.write(musicxml_cleaned)
 
-		# Dùng MuseScore để convert sang PDF
+		# Gọi MuseScore để xuất PDF
 		mscore_path = "/Applications/MuseScore 4.app/Contents/MacOS/mscore"
 		subprocess.run([mscore_path, musicxml_path, "-o", pdf_path], check=True)
 

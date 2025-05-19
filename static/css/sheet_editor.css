@@ -15,7 +15,7 @@ body {
 }
 
 .bga {
-	background-color: black;
+	background-color: #ffffff;
 	position: absolute;
 }
 
@@ -37,11 +37,18 @@ body {
 	background-image: url("/static/img/la-la-land-behind-the-scenes-footage-of-ryan-gosling-social.jpg");
 }
 
+
 .security3 {
-	top: 185px;
-	left: 870px;
-	width: 600px;
-	height: 80vh;
+  top: 185px;
+  right: 0;
+  width: 43%;
+  height: 80vh;
+}
+
+@media (max-width: 1440px) {
+  .security3 {
+    width: 40%;
+  }
 }
 
 .security4 {

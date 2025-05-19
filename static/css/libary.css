@@ -99,7 +99,7 @@ a {
 .app {
 	min-height: 80vh;
 	width: 100%;
-	max-width: 1600px;
+	/*max-width: 1600px;*/
 	background-color: var(--c-gray-800);
 	display: flex;
 	flex-direction: column;

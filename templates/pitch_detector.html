@@ -199,40 +199,42 @@
 	</script>
 </head>
 <body>
-<h1 style="color: rgb(256, 188, 188); width: 100%; text-align: center;">Pitch Detector</h1>
-<canvas id="oscilloscope"></canvas>
-<div class="detail">
-	<div class="detail-left">
-		<div class="main-detail">
-			<span id="note" class="note"></span>
-			<span id="hz" class="note">__ Hz</span>
+<div class="centerr">
+	<h1 style="color: rgb(256, 188, 188); width: 100%; text-align: center;">Pitch Detector</h1>
+	<canvas id="oscilloscope"></canvas>
+	<div class="detail">
+		<div class="detail-left">
+			<div class="main-detail">
+				<span id="note" class="note"></span>
+				<span id="hz" class="note">__ Hz</span>
+			</div>
+			<br>
+			<div class="main-detail bc">
+				<div class="instrument ac">
+					<label for="violin" class="ins-active">Violin</label><input name="violin" id="violin" value="violin"
+					                                                            hidden>
+					<label for="viola">Viola</label><input name="viola" id="viola" value="viola" hidden>
+					<label for="cello">Cello</label><input name="cello" id="cello" value="cello" hidden>
+					<label for="double-bass">Double Bass</label><input name="double-bass" id="double-bass"
+					                                                   value="double-bass" hidden>
+				</div>
+				<div class="cc">
+					<i class="fa-solid fa-play"></i>
+					<i class="fa-solid fa-play"></i>
+					<i class="fa-solid fa-play"></i>
+					<i class="fa-solid fa-play"></i>
+				</div>
+				<div class="instrument dc">
+					<label for="day2">D4</label><input name="day2" id="day2" value="day2" hidden>
+					<label for="day3">A4</label><input name="day3" id="day3" value="day3" hidden>
+					<label for="day1">G3</label><input name="day1" id="day1" value="day1" hidden>
+					<label for="day4" class="day-active">E5</label><input name="day4" id="day4" value="day4" hidden>
+				</div>
+			</div>
 		</div>
-		<br>
-		<div class="main-detail bc">
-			<div class="instrument ac">
-				<label for="violin" class="ins-active">Violin</label><input name="violin" id="violin" value="violin"
-				                                                            hidden>
-				<label for="viola">Viola</label><input name="viola" id="viola" value="viola" hidden>
-				<label for="cello">Cello</label><input name="cello" id="cello" value="cello" hidden>
-				<label for="double-bass">Double Bass</label><input name="double-bass" id="double-bass"
-				                                                   value="double-bass" hidden>
-			</div>
-			<div class="cc">
-				<i class="fa-solid fa-play"></i>
-				<i class="fa-solid fa-play"></i>
-				<i class="fa-solid fa-play"></i>
-				<i class="fa-solid fa-play"></i>
-			</div>
-			<div class="instrument dc">
-				<label for="day2">D4</label><input name="day2" id="day2" value="day2" hidden>
-				<label for="day3">A4</label><input name="day3" id="day3" value="day3" hidden>
-				<label for="day1">G3</label><input name="day1" id="day1" value="day1" hidden>
-				<label for="day4" class="day-active">E5</label><input name="day4" id="day4" value="day4" hidden>
-			</div>
+		<div class="detail-right">
+			<img id="sample" src="/static/logo/E_violin.PNG" alt="instrument">
 		</div>
-	</div>
-	<div class="detail-right">
-		<img id="sample" src="/static/logo/E_violin.PNG" alt="instrument">
 	</div>
 </div>
 <script>
