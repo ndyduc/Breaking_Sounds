@@ -1,5 +1,6 @@
 .env
 client_secret.js
+Data/
 # Bỏ qua file cấu hình bí mật
 
 # Bỏ qua thư mục hệ thống

@@ -1,17 +1,15 @@
-from flask import *
-from google.oauth2 import id_token
-from google.auth.transport.requests import Request
-from src.data_connecter import *
-from google_auth_oauthlib.flow import Flow
-from google.oauth2.credentials import Credentials
-from google.auth.exceptions import GoogleAuthError
-from google.auth.transport.requests import Request as GoogleRequest
-from google.oauth2 import id_token as google_id_token
+import os
+
 import requests.exceptions
 from dotenv import load_dotenv
+from flask import *
+from google.auth.exceptions import GoogleAuthError
+from google.auth.transport.requests import Request
+from google.oauth2 import id_token
+from google_auth_oauthlib.flow import Flow
 
-import os
-import logging
+from src.data_connecter import *
+
 google = Blueprint('google', __name__, url_prefix='/')
 
 
